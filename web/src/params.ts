@@ -90,7 +90,7 @@ export interface BoardConfig {
 /** 深いマージ（設定の一部だけを上書きするため） */
 export function mergeDeep<T>(base: T, override: unknown): T {
   if (override === null || typeof override !== 'object' || Array.isArray(override)) {
-    return (override === undefined ? base : (override as T));
+    return override === undefined ? base : (override as T);
   }
   const out: Record<string, unknown> = { ...(base as Record<string, unknown>) };
   for (const [k, v] of Object.entries(override as Record<string, unknown>)) {

@@ -27,8 +27,10 @@ export function alignLeftRight(a: Pose2D, b: Pose2D): Pose2D {
   let same = 0;
   let crossed = 0;
   for (const [l, r] of LR_PAIRS) {
-    same += Math.hypot(a[l][0] - b[l][0], a[l][1] - b[l][1]) + Math.hypot(a[r][0] - b[r][0], a[r][1] - b[r][1]);
-    crossed += Math.hypot(a[l][0] - b[r][0], a[l][1] - b[r][1]) + Math.hypot(a[r][0] - b[l][0], a[r][1] - b[l][1]);
+    same +=
+      Math.hypot(a[l][0] - b[l][0], a[l][1] - b[l][1]) + Math.hypot(a[r][0] - b[r][0], a[r][1] - b[r][1]);
+    crossed +=
+      Math.hypot(a[l][0] - b[r][0], a[l][1] - b[r][1]) + Math.hypot(a[r][0] - b[l][0], a[r][1] - b[l][1]);
   }
   return crossed < same ? swapLeftRight(b) : b;
 }
@@ -40,7 +42,11 @@ export function interpolatePose(a: Pose2D, bIn: Pose2D, s: number): Pose2D {
   for (let i = 0; i < a.length; i++) {
     const pa = a[i];
     const pb = b[i];
-    out.push([pa[0] + (pb[0] - pa[0]) * s, pa[1] + (pb[1] - pa[1]) * s, Math.min(pa[2], pb[2])] as Landmark2D);
+    out.push([
+      pa[0] + (pb[0] - pa[0]) * s,
+      pa[1] + (pb[1] - pa[1]) * s,
+      Math.min(pa[2], pb[2]),
+    ] as Landmark2D);
   }
   return out;
 }

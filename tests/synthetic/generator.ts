@@ -65,7 +65,11 @@ export function squatSkeleton(p: SquatPose): Vec3[] {
     const ankle: Vec3 = [sgn * DIM.stanceHalf, 0, DIM.ankleZ];
     const heel = add(ankle, add([fwd[0] * -0.06, fwd[1] * -0.06, 0], [0, 0, -0.05]));
     const toeP = add(ankle, add([fwd[0] * 0.17, fwd[1] * 0.17, 0], [0, 0, -0.06]));
-    let knee = add(ankle, [fwd[0] * DIM.shank * Math.sin(alpha), fwd[1] * DIM.shank * Math.sin(alpha), DIM.shank * Math.cos(alpha)]);
+    let knee = add(ankle, [
+      fwd[0] * DIM.shank * Math.sin(alpha),
+      fwd[1] * DIM.shank * Math.sin(alpha),
+      DIM.shank * Math.cos(alpha),
+    ]);
     knee = add(knee, [-sgn * p.kneeInM, 0, 0]);
     // 大腿：膝から上・後ろへ
     const hip: Vec3 = add(knee, [0, -DIM.thigh * Math.sin(beta), DIM.thigh * Math.cos(beta)]);
@@ -135,7 +139,9 @@ export const SYNTH_INTRINSICS = (name: string, withDistortion = true): Intrinsic
   deviceName: name,
   imageSize: [720, 1280],
   K: { fx: 1050, fy: 1050, cx: 362, cy: 641 },
-  dist: withDistortion ? { k1: 0.08, k2: -0.15, p1: 0.0005, p2: -0.0003, k3: 0.05 } : { k1: 0, k2: 0, p1: 0, p2: 0, k3: 0 },
+  dist: withDistortion
+    ? { k1: 0.08, k2: -0.15, p1: 0.0005, p2: -0.0003, k3: 0.05 }
+    : { k1: 0, k2: 0, p1: 0, p2: 0, k3: 0 },
   rms: 0.3,
   date: '2026-11-18',
 });
@@ -167,7 +173,12 @@ export function projectPose(J: Vec3[], cam: Camera, r: () => number, n: NoiseOpt
   return projectPoseEx(J, cam, r, n).pose;
 }
 
-export function projectPoseEx(J: Vec3[], cam: Camera, r: () => number, n: NoiseOptions): { pose: Pose2D | null; swapped: boolean } {
+export function projectPoseEx(
+  J: Vec3[],
+  cam: Camera,
+  r: () => number,
+  n: NoiseOptions,
+): { pose: Pose2D | null; swapped: boolean } {
   if (n.dropProb && r() < n.dropProb) return { pose: null, swapped: false };
   const out: Pose2D = J.map((X) => {
     const p = projectPoint(X, cam);

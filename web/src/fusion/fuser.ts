@@ -102,7 +102,14 @@ export class DltFuser implements Fuser {
       let us = undistortPose(input.sub, this.cams.sub);
       // 手順3：左右の取り違えの補正
       if (this.p.swapCorrection) {
-        const d = decideSwap(um, us, this.cams.main, this.cams.sub, this.p.minVisibility, this.p.swapMarginPx ?? 3);
+        const d = decideSwap(
+          um,
+          us,
+          this.cams.main,
+          this.cams.sub,
+          this.p.minVisibility,
+          this.p.swapMarginPx ?? 3,
+        );
         us = d.sub;
         out.quality.swapApplied = d.swapped;
       }

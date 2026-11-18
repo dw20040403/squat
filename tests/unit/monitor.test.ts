@@ -4,8 +4,15 @@ import { AnomalyMonitor, type MonitorSample } from '../../web/src/monitor/anomal
 import { RateMeter } from '../../web/src/monitor/fps';
 
 const ok = (now: number): MonitorSample => ({
-  now, channelOpen: true, lastSubPoseAt: now - 50, mainRequiredVisible: true, subRequiredVisible: true,
-  reprojErrPx: 5, mainFps: 10, subFps: 10, rttMs: 15,
+  now,
+  channelOpen: true,
+  lastSubPoseAt: now - 50,
+  mainRequiredVisible: true,
+  subRequiredVisible: true,
+  reprojErrPx: 5,
+  mainFps: 10,
+  subFps: 10,
+  rttMs: 15,
 });
 
 /** 100ms刻みの時系列を与えて、最初に中止した時刻と原因を返す */

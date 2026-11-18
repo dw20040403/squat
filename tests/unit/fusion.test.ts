@@ -54,7 +54,10 @@ describe('3D統合（合成データ）', () => {
 
   it('体の向きが回っていても（yaw 30°）精度が保たれる', () => {
     const seq = makeSequence({
-      durationS: 6, layout: preset, noise: { sigmaPx: 2 }, seed: 9,
+      durationS: 6,
+      layout: preset,
+      noise: { sigmaPx: 2 },
+      seed: 9,
       motion: (t) => ({ ...squatMotion(t), yawDeg: 30 }),
     });
     const e = errors(seq, processSequence(seq.main, seq.sub, seq.cams, NO_FILTER));
@@ -63,14 +66,23 @@ describe('3D統合（合成データ）', () => {
   });
 
   it('副端末の左右の取り違えを補正する', () => {
-    const seq = makeSequence({ durationS: 6, layout: preset, noise: { sigmaPx: 1 }, subNoise: { sigmaPx: 1, swapProb: 0.3 }, seed: 5 });
+    const seq = makeSequence({
+      durationS: 6,
+      layout: preset,
+      noise: { sigmaPx: 1 },
+      subNoise: { sigmaPx: 1, swapProb: 0.3 },
+      seed: 5,
+    });
     const frames = processSequence(seq.main, seq.sub, seq.cams, NO_FILTER);
     const swaps = frames.filter((f) => f.quality.swapApplied).length;
     expect(swaps).toBeGreaterThan(5);
     const e = errors(seq, frames);
     expect(e.joint).toBeLessThan(0.02);
     // 補正しない場合は大きく崩れる
-    const noSwap = processSequence(seq.main, seq.sub, seq.cams, { ...NO_FILTER, fusion: { ...NO_FILTER.fusion, swapCorrection: false } });
+    const noSwap = processSequence(seq.main, seq.sub, seq.cams, {
+      ...NO_FILTER,
+      fusion: { ...NO_FILTER.fusion, swapCorrection: false },
+    });
     expect(errors(seq, noSwap).joint).toBeGreaterThan(e.joint * 2);
   });
 
@@ -80,7 +92,13 @@ describe('3D統合（合成データ）', () => {
         main: { azimuthDeg: -theta / 2, distanceM: 2.5, heightM: 1.0 },
         sub: { azimuthDeg: theta / 2, distanceM: 2.5, heightM: 1.0 },
       };
-      const seq = makeSequence({ durationS: 3, layout: lay, noise: { sigmaPx: 3 }, subNoise: { sigmaPx: 3, swapProb: 0.2 }, seed: theta });
+      const seq = makeSequence({
+        durationS: 3,
+        layout: lay,
+        noise: { sigmaPx: 3 },
+        subNoise: { sigmaPx: 3, swapProb: 0.2 },
+        seed: theta,
+      });
       const e = errors(seq, processSequence(seq.main, seq.sub, seq.cams, NO_FILTER));
       expect(e.joint, `交差角${theta}°`).toBeLessThan(0.04);
     }
@@ -101,7 +119,9 @@ describe('3D統合（合成データ）', () => {
 
   it('再投影誤差がmaxReprojPxを超えた関節は無効', () => {
     const seq = makeSequence({ durationS: 1, layout: preset, noise: { sigmaPx: 0 }, subPhaseMs: 0 });
-    const sub = seq.sub.find((s) => s.t === seq.main[0].t)!.pose!.map((p) => [...p] as [number, number, number]);
+    const sub = seq.sub
+      .find((s) => s.t === seq.main[0].t)!
+      .pose!.map((p) => [...p] as [number, number, number]);
     sub[25] = [sub[25][0], sub[25][1] + 200, sub[25][2]]; // 左膝だけ大きくずらす
     const fuser = new DltFuser(seq.cams, P.fusion);
     const f = fuser.process({ t: seq.main[0].t, main: seq.main[0].pose, sub });

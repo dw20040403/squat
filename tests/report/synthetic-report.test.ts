@@ -19,12 +19,21 @@ const here = dirname(fileURLToPath(import.meta.url));
 const outPath = resolve(here, '../reports/synthetic-report.md');
 
 interface Result {
-  depth: number; lateral: number; vertical: number; total: number;
+  depth: number;
+  lateral: number;
+  vertical: number;
+  total: number;
   metrics: Record<string, number>;
   missing: number;
 }
 
-function evaluate(lay: { main: LayoutCamera; sub: LayoutCamera }, sigma: number, p: Params, seed = 11, durationS = 15): Result {
+function evaluate(
+  lay: { main: LayoutCamera; sub: LayoutCamera },
+  sigma: number,
+  p: Params,
+  seed = 11,
+  durationS = 15,
+): Result {
   const seq = makeSequence({ durationS, layout: lay, noise: { sigmaPx: sigma }, seed });
   const frames = processSequence(seq.main, seq.sub, seq.cams, p);
   const c1 = cameraCenter(seq.cams.main.extr);
@@ -38,7 +47,10 @@ function evaluate(lay: { main: LayoutCamera; sub: LayoutCamera }, sigma: number,
     const truth = seq.truth[i].joints;
     JOINT_INDICES.forEach((j, k) => {
       const X = f.joints3d[k];
-      if (!X) { missing++; return; }
+      if (!X) {
+        missing++;
+        return;
+      }
       const e = [X[0] - truth[j][0], X[1] - truth[j][1], X[2] - truth[j][2]];
       sq.d += (e[0] * depthDir[0] + e[1] * depthDir[1]) ** 2;
       sq.l += (e[0] * latDir[0] + e[1] * latDir[1]) ** 2;
@@ -52,8 +64,13 @@ function evaluate(lay: { main: LayoutCamera; sub: LayoutCamera }, sigma: number,
   });
   const rms = (s: number) => Math.sqrt(s / Math.max(1, sq.n)) * 100;
   return {
-    depth: rms(sq.d), lateral: rms(sq.l), vertical: rms(sq.v), total: rms(sq.d + sq.l + sq.v),
-    metrics: Object.fromEntries(METRIC_KEYS.map((k) => [k, mErr[k].length ? mErr[k].reduce((a, b) => a + b, 0) / mErr[k].length : NaN])),
+    depth: rms(sq.d),
+    lateral: rms(sq.l),
+    vertical: rms(sq.v),
+    total: rms(sq.d + sq.l + sq.v),
+    metrics: Object.fromEntries(
+      METRIC_KEYS.map((k) => [k, mErr[k].length ? mErr[k].reduce((a, b) => a + b, 0) / mErr[k].length : NaN]),
+    ),
     missing: missing / (frames.length * JOINT_INDICES.length),
   };
 }
@@ -67,26 +84,39 @@ it('合成データの誤差レポートを出力する', () => {
   const lines: string[] = [];
   lines.push('# 合成データによる誤差のレポート', '');
   lines.push(`生成：${new Date().toISOString()}（\`npm run report\`）`, '');
-  lines.push('条件：周期3秒のスクワット（膝の曲げ5〜100°、体幹の前傾は膝の曲げ角度の0.35倍、つま先の開き15°、膝の入り込み最大3cm）、15秒、主10fps・副10fps（位相37msずれ、補間あり）、');
-  lines.push('内部パラメータ fx=fy=1050px（720×1280、歪みあり）、カメラは腰の高さ（0.8m）を注視。関節位置の誤差はRMS（cm）、指標の誤差は平均絶対誤差（度）。', '');
+  lines.push(
+    '条件：周期3秒のスクワット（膝の曲げ5〜100°、体幹の前傾は膝の曲げ角度の0.35倍、つま先の開き15°、膝の入り込み最大3cm）、15秒、主10fps・副10fps（位相37msずれ、補間あり）、',
+  );
+  lines.push(
+    '内部パラメータ fx=fy=1050px（720×1280、歪みあり）、カメラは腰の高さ（0.8m）を注視。関節位置の誤差はRMS（cm）、指標の誤差は平均絶対誤差（度）。',
+    '',
+  );
   lines.push('方向：奥行き＝2台のカメラの水平方向の二等分線、直交＝それに直交する水平方向、鉛直＝Z。', '');
 
   lines.push('## 1. 配置のプリセットごとの誤差', '');
   for (const sigma of [2, 5]) {
-    for (const [label, p] of [['平滑化なし', NO_FILTER], ['平滑化あり（params.jsonの係数）', P]] as const) {
+    for (const [label, p] of [
+      ['平滑化なし', NO_FILTER],
+      ['平滑化あり（params.jsonの係数）', P],
+    ] as const) {
       lines.push(`### 2D誤差 σ=${sigma}px、${label}`, '');
       lines.push(`| プリセット | 奥行き | 直交 | 鉛直 | 合計 | 欠損率 ${metricHeader}`);
       lines.push(`|---|---|---|---|---|---|${METRIC_KEYS.map(() => '---').join('|')}|`);
       for (const pr of layout.presets) {
         const r = evaluate(pr, sigma, p);
-        lines.push(`| ${pr.label} | ${f2(r.depth)} | ${f2(r.lateral)} | ${f2(r.vertical)} | ${f2(r.total)} | ${(r.missing * 100).toFixed(1)}% | ${metricCells(r)} |`);
+        lines.push(
+          `| ${pr.label} | ${f2(r.depth)} | ${f2(r.lateral)} | ${f2(r.vertical)} | ${f2(r.total)} | ${(r.missing * 100).toFixed(1)}% | ${metricCells(r)} |`,
+        );
       }
       lines.push('');
     }
   }
 
   lines.push('## 2. 交差角による誤差（正面を中心に左右対称、距離2.5m・高さ1.0m、σ=5px、平滑化なし）', '');
-  lines.push('目安は spec 5.4.4節の式（σ_m＝σ×距離/fx：奥行き σ_m/(√2·sin(θ/2))、直交 σ_m/(√2·cos(θ/2))）。', '');
+  lines.push(
+    '目安は spec 5.4.4節の式（σ_m＝σ×距離/fx：奥行き σ_m/(√2·sin(θ/2))、直交 σ_m/(√2·cos(θ/2))）。',
+    '',
+  );
   lines.push(`| 交差角 | 奥行き | 目安 | 直交 | 目安 | 鉛直 | 合計 ${metricHeader}`);
   lines.push(`|---|---|---|---|---|---|---|${METRIC_KEYS.map(() => '---').join('|')}|`);
   const sigmaM = (5 * 2.5) / 1050;
@@ -99,7 +129,9 @@ it('合成データの誤差レポートを出力する', () => {
     const r = evaluate(lay, 5, NO_FILTER);
     sweep.push({ theta, r });
     const h = (theta * Math.PI) / 360;
-    lines.push(`| ${theta}° | ${f2(r.depth)} | ${f2((sigmaM / (Math.SQRT2 * Math.sin(h))) * 100)} | ${f2(r.lateral)} | ${f2((sigmaM / (Math.SQRT2 * Math.cos(h))) * 100)} | ${f2(r.vertical)} | ${f2(r.total)} | ${metricCells(r)} |`);
+    lines.push(
+      `| ${theta}° | ${f2(r.depth)} | ${f2((sigmaM / (Math.SQRT2 * Math.sin(h))) * 100)} | ${f2(r.lateral)} | ${f2((sigmaM / (Math.SQRT2 * Math.cos(h))) * 100)} | ${f2(r.vertical)} | ${f2(r.total)} | ${metricCells(r)} |`,
+    );
   }
   lines.push('');
 
@@ -128,6 +160,7 @@ it('合成データの誤差レポートを出力する', () => {
   // 最低限の健全性：交差角が大きいほど奥行き方向の誤差は小さくなる
   expect(sweep[sweep.length - 1].r.depth).toBeLessThan(sweep[0].r.depth);
   // beta=0.01は遅れが大きく、betaを上げると膝の曲げ角度の誤差が減る（spec 5.5の試算と同じ傾向）
-  const kf = (mc: number, b: number) => filterRows.find((x) => x.mc === mc && x.beta === b)!.r.metrics.kneeFlexL;
+  const kf = (mc: number, b: number) =>
+    filterRows.find((x) => x.mc === mc && x.beta === b)!.r.metrics.kneeFlexL;
   expect(kf(1, 5)).toBeLessThan(kf(1, 0.01));
 });

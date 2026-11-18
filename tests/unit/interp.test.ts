@@ -3,7 +3,8 @@ import { PoseBuffer, samplePoseAt, type TimedPose } from '../../web/src/fusion/i
 import { HoldLast, OneEuroFilter } from '../../web/src/fusion/filters';
 import type { Pose2D } from '../../web/src/fusion/landmarks';
 
-const P = (u: number, vis = 0.9): Pose2D => Array.from({ length: 33 }, () => [u, 2 * u, vis] as [number, number, number]);
+const P = (u: number, vis = 0.9): Pose2D =>
+  Array.from({ length: 33 }, () => [u, 2 * u, vis] as [number, number, number]);
 const opt = { maxPairGapMs: 150, maxExtrapMs: 50 };
 
 describe('補間', () => {

@@ -1,10 +1,7 @@
 {
   "deviceName": "approx-iphone15",
   "approximate": true,
-  "imageSize": [
-    720,
-    1280
-  ],
+  "imageSize": [720, 1280],
   "K": {
     "fx": 1050,
     "fy": 1050,

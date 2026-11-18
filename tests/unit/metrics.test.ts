@@ -7,18 +7,25 @@ import { squatSkeleton } from '../synthetic/generator';
 /** 直立：x右、y前、z上 */
 function standing(): (Vec3 | null)[] {
   const J: (Vec3 | null)[] = new Array(NUM_LANDMARKS).fill(null);
-  J[23] = [-0.1, 0, 0.9]; J[24] = [0.1, 0, 0.9];
-  J[25] = [-0.1, 0, 0.5]; J[26] = [0.1, 0, 0.5];
-  J[27] = [-0.1, 0, 0.08]; J[28] = [0.1, 0, 0.08];
-  J[29] = [-0.1, -0.06, 0.03]; J[30] = [0.1, -0.06, 0.03];
-  J[31] = [-0.1, 0.16, 0.02]; J[32] = [0.1, 0.16, 0.02];
-  J[11] = [-0.19, 0, 1.4]; J[12] = [0.19, 0, 1.4];
+  J[23] = [-0.1, 0, 0.9];
+  J[24] = [0.1, 0, 0.9];
+  J[25] = [-0.1, 0, 0.5];
+  J[26] = [0.1, 0, 0.5];
+  J[27] = [-0.1, 0, 0.08];
+  J[28] = [0.1, 0, 0.08];
+  J[29] = [-0.1, -0.06, 0.03];
+  J[30] = [0.1, -0.06, 0.03];
+  J[31] = [-0.1, 0.16, 0.02];
+  J[32] = [0.1, 0.16, 0.02];
+  J[11] = [-0.19, 0, 1.4];
+  J[12] = [0.19, 0, 1.4];
   return J;
 }
 
 const rotZ = (J: (Vec3 | null)[], deg: number): (Vec3 | null)[] => {
   const a = (deg * Math.PI) / 180;
-  const c = Math.cos(a), s = Math.sin(a);
+  const c = Math.cos(a),
+    s = Math.sin(a);
   return J.map((p) => (p ? [c * p[0] + s * p[1], -s * p[0] + c * p[1], p[2]] : null));
 };
 
@@ -36,15 +43,18 @@ describe('指標', () => {
 
   it('前傾は正、後傾は負', () => {
     const J = standing();
-    J[11] = [-0.19, 0.3, 0.9 + 0.3 * Math.sqrt(3)]; J[12] = [0.19, 0.3, 0.9 + 0.3 * Math.sqrt(3)]; // 30°前傾
+    J[11] = [-0.19, 0.3, 0.9 + 0.3 * Math.sqrt(3)];
+    J[12] = [0.19, 0.3, 0.9 + 0.3 * Math.sqrt(3)]; // 30°前傾
     expect(computeAngles(J).trunkLean).toBeCloseTo(30, 6);
-    J[11] = [-0.19, -0.5, 0.9 + 0.5]; J[12] = [0.19, -0.5, 0.9 + 0.5];
+    J[11] = [-0.19, -0.5, 0.9 + 0.5];
+    J[12] = [0.19, -0.5, 0.9 + 0.5];
     expect(computeAngles(J).trunkLean).toBeCloseTo(-45, 6);
   });
 
   it('膝の曲げ角度：90°', () => {
     const J = standing();
-    J[23] = [-0.1, -0.4, 0.5]; J[24] = [0.1, -0.4, 0.5]; // 大腿が水平
+    J[23] = [-0.1, -0.4, 0.5];
+    J[24] = [0.1, -0.4, 0.5]; // 大腿が水平
     const a = computeAngles(J);
     expect(a.kneeFlexL).toBeCloseTo(90, 6);
     expect(a.kneeFlexR).toBeCloseTo(90, 6);
@@ -108,7 +118,15 @@ describe('指標', () => {
   });
 
   it('丸めと表示', () => {
-    const a = roundAngles({ kneeFlexL: 12.345, kneeFlexR: null, trunkLean: -0.04, toeOutL: 1, toeOutR: 2, kneeInL: 3, kneeInR: NaN });
+    const a = roundAngles({
+      kneeFlexL: 12.345,
+      kneeFlexR: null,
+      trunkLean: -0.04,
+      toeOutL: 1,
+      toeOutR: 2,
+      kneeInL: 3,
+      kneeInR: NaN,
+    });
     expect(a.kneeFlexL).toBe(12.3);
     expect(a.kneeInR).toBeNull();
     expect(formatAngle(null)).toBe('—');

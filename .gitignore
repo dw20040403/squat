@@ -15,3 +15,5 @@ playwright-report/
 .DS_Store
 __pycache__/
 .venv/
+aruco_board.pdf
+aruco_board.png

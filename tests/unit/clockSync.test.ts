@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import params from '../../config/params.json';
-import { ClockSyncClient, estimateOffset, respondSync, syncSample, type SyncReq } from '../../web/src/net/clockSync';
+import {
+  ClockSyncClient,
+  estimateOffset,
+  respondSync,
+  syncSample,
+  type SyncReq,
+} from '../../web/src/net/clockSync';
 import { rng } from '../synthetic/generator';
 
 describe('時刻同期', () => {
@@ -12,8 +18,13 @@ describe('時刻同期', () => {
   });
   it('往復時間が小さい5回分の中央値', () => {
     const samples = [
-      { offset: 100, rtt: 10 }, { offset: 101, rtt: 12 }, { offset: 99, rtt: 11 },
-      { offset: 150, rtt: 80 }, { offset: 102, rtt: 13 }, { offset: 98, rtt: 14 }, { offset: 40, rtt: 90 },
+      { offset: 100, rtt: 10 },
+      { offset: 101, rtt: 12 },
+      { offset: 99, rtt: 11 },
+      { offset: 150, rtt: 80 },
+      { offset: 102, rtt: 13 },
+      { offset: 98, rtt: 14 },
+      { offset: 40, rtt: 90 },
     ];
     expect(estimateOffset(samples, 5)).toBe(100);
   });
@@ -37,8 +48,15 @@ describe('時刻同期', () => {
           schedule(down + 0.5, () => client.handle(res));
         });
       },
-      setTimer: (fn, ms) => { const h = { at: simNow + ms, fn }; queue.push(h); return h; },
-      clearTimer: (h) => { const i = queue.indexOf(h as never); if (i >= 0) queue.splice(i, 1); },
+      setTimer: (fn, ms) => {
+        const h = { at: simNow + ms, fn };
+        queue.push(h);
+        return h;
+      },
+      clearTimer: (h) => {
+        const i = queue.indexOf(h as never);
+        if (i >= 0) queue.splice(i, 1);
+      },
     });
     let finished = false;
     const done = client.initial().then((v) => ((finished = true), v));

@@ -7,7 +7,8 @@ import type { Vec3 } from '../fusion/math';
 import { METRIC_KEYS, type Angles } from '../metrics/angles';
 import type { LayoutCamera, Params } from '../params';
 
-export type AbortReason = 'peer-timeout' | 'low-visibility' | 'high-reproj' | 'low-fps' | 'high-rtt' | 'error';
+export type AbortReason =
+  'peer-timeout' | 'low-visibility' | 'high-reproj' | 'low-fps' | 'high-rtt' | 'error';
 
 export interface AbortInfo {
   reason: AbortReason;
@@ -118,7 +119,10 @@ export interface SessionStats {
   frames: number;
   durationS: number;
   /** 指標ごとの欠損率・最小・最大・平均 */
-  metrics: Record<string, { missingRate: number; min: number | null; max: number | null; mean: number | null }>;
+  metrics: Record<
+    string,
+    { missingRate: number; min: number | null; max: number | null; mean: number | null }
+  >;
   /** 3D関節の欠損率（全関節・全フレーム） */
   jointMissingRate: number;
   meanReprojErrPx: number | null;

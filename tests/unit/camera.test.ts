@@ -8,7 +8,12 @@ describe('カメラモデル', () => {
   const intr = SYNTH_INTRINSICS('t', true);
 
   it('歪みつき投影と歪み補正が往復で一致する', () => {
-    for (const [x, y] of [[0, 0], [0.2, -0.3], [-0.33, 0.55], [0.3, 0.6]]) {
+    for (const [x, y] of [
+      [0, 0],
+      [0.2, -0.3],
+      [-0.33, 0.55],
+      [0.3, 0.6],
+    ]) {
       const [u, v] = normalizedToPixel(x, y, intr);
       const [x2, y2] = undistortPixel(u, v, intr);
       expect(x2).toBeCloseTo(x, 7);
@@ -33,7 +38,12 @@ describe('カメラモデル', () => {
   it('投影 → 歪み補正 → 三角測量（ノイズなし）で誤差1mm未満', () => {
     const camA = lookAtCamera({ azimuthDeg: -45, distanceM: 2.5, heightM: 1.0 }, intr);
     const camB = lookAtCamera({ azimuthDeg: 45, distanceM: 2.5, heightM: 1.0 }, SYNTH_INTRINSICS('b', true));
-    const pts: Vec3[] = [[0, 0, 0], [0.3, -0.2, 1.5], [-0.25, 0.4, 0.1], [0.1, 0.1, 1.7]];
+    const pts: Vec3[] = [
+      [0, 0, 0],
+      [0.3, -0.2, 1.5],
+      [-0.25, 0.4, 0.1],
+      [0.1, 0.1, 1.7],
+    ];
     for (const X of pts) {
       const views = [camA, camB].map((c) => {
         const [u, v] = projectPoint(X, c)!;

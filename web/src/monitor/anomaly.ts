@@ -81,14 +81,19 @@ export class AnomalyMonitor {
     const closedFor = this.closed.update(!s.channelOpen, s.now);
     const lastPose = s.lastSubPoseAt ?? this.startedAt;
     const silentFor = s.now - Math.max(lastPose, this.startedAt);
-    if (closedFor >= p.peerTimeoutS * 1000) return abort('peer-timeout', `DataChannelの切断が${(closedFor / 1000).toFixed(1)}秒続きました`);
-    if (silentFor >= p.peerTimeoutS * 1000) return abort('peer-timeout', `副端末のデータが${(silentFor / 1000).toFixed(1)}秒届いていません`);
+    if (closedFor >= p.peerTimeoutS * 1000)
+      return abort('peer-timeout', `DataChannelの切断が${(closedFor / 1000).toFixed(1)}秒続きました`);
+    if (silentFor >= p.peerTimeoutS * 1000)
+      return abort('peer-timeout', `副端末のデータが${(silentFor / 1000).toFixed(1)}秒届いていません`);
 
     // 2. 必須の関節の可視度
     const lowVis = s.mainRequiredVisible === false || s.subRequiredVisible === false;
     const visFor = this.vis.update(lowVis, s.now);
     if (visFor >= p.lowVisibilityS * 1000) {
-      const which = [s.mainRequiredVisible === false ? '主カメラ' : '', s.subRequiredVisible === false ? '副カメラ' : '']
+      const which = [
+        s.mainRequiredVisible === false ? '主カメラ' : '',
+        s.subRequiredVisible === false ? '副カメラ' : '',
+      ]
         .filter(Boolean)
         .join('・');
       return abort('low-visibility', `${which}で${(visFor / 1000).toFixed(1)}秒続きました`);
@@ -98,18 +103,25 @@ export class AnomalyMonitor {
     const highErr = s.reprojErrPx !== null && s.reprojErrPx > p.maxReprojErrPx;
     const errFor = this.reproj.update(highErr, s.now);
     if (errFor >= p.highReprojS * 1000)
-      return abort('high-reproj', `平均${s.reprojErrPx!.toFixed(1)}px（しきい値${p.maxReprojErrPx}px）が${(errFor / 1000).toFixed(1)}秒続きました`);
+      return abort(
+        'high-reproj',
+        `平均${s.reprojErrPx!.toFixed(1)}px（しきい値${p.maxReprojErrPx}px）が${(errFor / 1000).toFixed(1)}秒続きました`,
+      );
 
     // 4. 処理速度
     const lowFps = (s.mainFps !== null && s.mainFps < p.minFps) || (s.subFps !== null && s.subFps < p.minFps);
     const fpsFor = this.fps.update(lowFps, s.now);
     if (fpsFor >= p.lowFpsS * 1000)
-      return abort('low-fps', `主端末${fmt(s.mainFps)}fps・副端末${fmt(s.subFps)}fps（しきい値${p.minFps}fps）`);
+      return abort(
+        'low-fps',
+        `主端末${fmt(s.mainFps)}fps・副端末${fmt(s.subFps)}fps（しきい値${p.minFps}fps）`,
+      );
 
     // 5. 往復時間
     const highRtt = s.rttMs !== null && s.rttMs > p.maxRttMs;
     const rttFor = this.rtt.update(highRtt, s.now);
-    if (rttFor >= p.highRttS * 1000) return abort('high-rtt', `往復時間${s.rttMs!.toFixed(0)}ms（しきい値${p.maxRttMs}ms）`);
+    if (rttFor >= p.highRttS * 1000)
+      return abort('high-rtt', `往復時間${s.rttMs!.toFixed(0)}ms（しきい値${p.maxRttMs}ms）`);
 
     return null;
   }

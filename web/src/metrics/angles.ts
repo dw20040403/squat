@@ -4,7 +4,15 @@ import { LM } from '../fusion/landmarks';
 import { angleBetweenDeg, cross, deg, dot, mid, normalize, sub, type Vec3 } from '../fusion/math';
 import type { MetricsParams } from '../params';
 
-export const METRIC_KEYS = ['kneeFlexL', 'kneeFlexR', 'trunkLean', 'toeOutL', 'toeOutR', 'kneeInL', 'kneeInR'] as const;
+export const METRIC_KEYS = [
+  'kneeFlexL',
+  'kneeFlexR',
+  'trunkLean',
+  'toeOutL',
+  'toeOutR',
+  'kneeInL',
+  'kneeInR',
+] as const;
 export type MetricKey = (typeof METRIC_KEYS)[number];
 export type Angles = Record<MetricKey, number | null>;
 
