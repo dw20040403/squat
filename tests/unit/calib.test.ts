@@ -70,6 +70,15 @@ describe('カメラ配置', () => {
     );
     expect(w2.some((x) => x.includes('交差角'))).toBe(true);
   });
+  it('30°/90°のプリセット：交差角60°（範囲内）で、同じ側の注意が出る', () => {
+    const p = layoutCfg.presets.find((x) => x.id === 'front-right-30-90')!;
+    expect(p.main.azimuthDeg).toBe(30);
+    expect(p.sub.azimuthDeg).toBe(90);
+    expect(crossingAngleDeg(p.main, p.sub)).toBe(60);
+    const w = layoutWarnings(p.main, p.sub, layoutCfg as never);
+    expect(w).toHaveLength(1);
+    expect(w[0]).toContain('同じ側');
+  });
   it('実測の配置と設定の比較', () => {
     const front = layoutCfg.presets[0];
     const a = lookAtCamera({ azimuthDeg: -43, distanceM: 2.45, heightM: 1.02 }, SYNTH_INTRINSICS('a'));

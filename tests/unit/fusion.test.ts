@@ -104,6 +104,21 @@ describe('3D統合（合成データ）', () => {
     }
   });
 
+  it('すべての配置のプリセットで、ノイズ2pxの誤差がcmオーダー・膝の曲げ角度±3°以内（平滑化なし）', () => {
+    for (const pr of layout.presets) {
+      const seq = makeSequence({
+        durationS: 6,
+        layout: pr,
+        noise: { sigmaPx: 2 },
+        subNoise: { sigmaPx: 2, swapProb: 0.1 },
+        seed: 21,
+      });
+      const e = errors(seq, processSequence(seq.main, seq.sub, seq.cams, NO_FILTER));
+      expect(e.joint, pr.id).toBeLessThan(0.03);
+      expect(e.knee, pr.id).toBeLessThan(3);
+    }
+  });
+
   it('欠損は最大300ms保持し、それを超えたらnull', () => {
     const seq = makeSequence({ durationS: 2, layout: preset, noise: { sigmaPx: 0.5 } });
     const fuser = new DltFuser(seq.cams, P.fusion);

@@ -11,6 +11,12 @@
       "label": "右側の前後（45°/135°）",
       "main": { "azimuthDeg": 45, "distanceM": 2.5, "heightM": 1.0 },
       "sub": { "azimuthDeg": 135, "distanceM": 2.5, "heightM": 1.0 }
+    },
+    {
+      "id": "front-right-30-90",
+      "label": "正面寄りと右真横（30°/90°）",
+      "main": { "azimuthDeg": 30, "distanceM": 2.5, "heightM": 1.0 },
+      "sub": { "azimuthDeg": 90, "distanceM": 2.5, "heightM": 1.0 }
     }
   ],
   "default": "front-pair",

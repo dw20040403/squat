@@ -74,6 +74,7 @@ export class MainApp implements MainContext {
     start: HTMLButtonElement;
     testRec: HTMLButtonElement;
     reason: HTMLElement;
+    layoutBtn: HTMLButtonElement;
     devinfo: HTMLElement;
   };
 
@@ -135,16 +136,19 @@ export class MainApp implements MainContext {
     );
     const reason = h('div', { class: 'reason' });
     const menu = h('button', { class: 'btn ghost', onclick: () => this.openMenu() }, 'メニュー');
+    // カメラ配置の設定をすぐ選べるように、現在の配置を表示するボタンを置く
+    const layoutBtn = h('button', { class: 'btn ghost small', onclick: () => openLayoutScreen(this) }, '');
     root.appendChild(
       h(
         'div',
         { class: 'app' },
         status,
         this.core.stage,
-        h('div', { class: 'toolbar' }, start, testRec, h('span', { class: 'grow' }), menu, reason),
+        h('div', { class: 'toolbar' }, start, testRec, h('span', { class: 'grow' }), layoutBtn, menu, reason),
       ),
     );
-    this.el = { status, start, testRec, reason, devinfo };
+    this.el = { status, start, testRec, reason, devinfo, layoutBtn };
+    this.renderLayoutButton();
   }
 
   // ---- MainContext ----
@@ -157,6 +161,7 @@ export class MainApp implements MainContext {
   saveLayout(l: LayoutSelection): void {
     this.layoutSel = l;
     saveLayoutSelection(l);
+    this.renderLayoutButton();
   }
   onFused(cb: (f: FusedFrame) => void): () => void {
     this.fusedListeners.add(cb);
@@ -606,6 +611,16 @@ export class MainApp implements MainContext {
       b.t = now;
     }
     return b.rate;
+  }
+
+  /** ツールバーの配置ボタンに、選んでいるプリセット（または手入力の角度）を表示する */
+  private renderLayoutButton(): void {
+    if (!this.el?.layoutBtn) return;
+    const l = this.layoutSel;
+    const p = this.cfg.layout.presets.find((x) => x.id === l.presetId);
+    this.el.layoutBtn.textContent = p
+      ? `配置：${p.label}`
+      : `配置：手入力（主${l.main.azimuthDeg}°/副${l.sub.azimuthDeg}°）`;
   }
 
   // ---- 状態の表示 ----
