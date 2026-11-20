@@ -79,6 +79,13 @@ describe('カメラ配置', () => {
     expect(w).toHaveLength(1);
     expect(w[0]).toContain('同じ側');
   });
+  it('0°/90°のプリセット：交差角90°（範囲内）で、注意は出ない', () => {
+    const p = layoutCfg.presets.find((x) => x.id === 'front-right-0-90')!;
+    expect(p.main.azimuthDeg).toBe(0);
+    expect(p.sub.azimuthDeg).toBe(90);
+    expect(crossingAngleDeg(p.main, p.sub)).toBe(90);
+    expect(layoutWarnings(p.main, p.sub, layoutCfg as never)).toEqual([]);
+  });
   it('実測の配置と設定の比較', () => {
     const front = layoutCfg.presets[0];
     const a = lookAtCamera({ azimuthDeg: -43, distanceM: 2.45, heightM: 1.02 }, SYNTH_INTRINSICS('a'));
