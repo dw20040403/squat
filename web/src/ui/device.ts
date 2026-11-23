@@ -47,8 +47,13 @@ export class DeviceCore {
     | ((ctx: CanvasRenderingContext2D, map: { scale: number; offsetX: number; offsetY: number }) => void)
     | null = null;
   onPose: (f: PoseFrame) => void = () => {};
+  /** カメラを自動で開き直したとき（理由つき）。録画中なら止まるので、画面で知らせる */
+  onCameraRestart: (reason: string) => void = () => {};
   invalidJoints: Set<number> | undefined;
   error: string | null = null;
+  private recovering = false;
+  private lastMediaTime = -1;
+  private stalledSince = 0;
 
   constructor(
     readonly cfg: AppConfig,
@@ -107,7 +112,79 @@ export class DeviceCore {
     this.loop = new FrameLoop(this.video, this.cfg.params.frameIntervalMs, (f) => this.process(f));
     this.loop.start();
     new ResizeObserver(() => this.draw()).observe(this.stage);
+    this.watchCamera();
     status('');
+  }
+
+  /**
+   * カメラの映像が止まったら復旧する。iOSのSafariでは、録画の停止やダウンロードの確認、
+   * 画面の切り替えのあとにカメラが中断され、映像が真っ暗のまま戻らないことがある。
+   * - 映像の要素が一時停止していたら再生し直す
+   * - トラックが終了した、または映像の時刻が一定時間進まない場合はカメラを開き直す
+   */
+  private watchCamera(): void {
+    const check = () => void this.checkCamera();
+    this.video.addEventListener('pause', () => {
+      if (document.visibilityState === 'visible') void this.video.play().catch(() => {});
+    });
+    document.addEventListener('visibilitychange', () => {
+      this.stalledSince = 0;
+      if (document.visibilityState === 'visible') check();
+    });
+    this.bindTrack();
+    window.setInterval(check, 1000);
+  }
+
+  private bindTrack(): void {
+    const track = this.cam?.stream.getVideoTracks()[0];
+    track?.addEventListener('ended', () => void this.restartCamera('カメラが終了しました'));
+  }
+
+  private async checkCamera(): Promise<void> {
+    if (!this.cam || this.recovering || document.visibilityState !== 'visible') return;
+    const track = this.cam.stream.getVideoTracks()[0];
+    if (!track || track.readyState === 'ended') return this.restartCamera('カメラが終了しました');
+    if (this.video.paused) await this.video.play().catch(() => {});
+    // 映像の時刻が進んでいるか（推論で主スレッドが止まっていても、映像の時刻は進む）
+    const mt = this.video.currentTime;
+    const now = performance.now();
+    if (mt !== this.lastMediaTime) {
+      this.lastMediaTime = mt;
+      this.stalledSince = 0;
+      return;
+    }
+    if (!this.stalledSince) this.stalledSince = now;
+    else if (now - this.stalledSince > CAMERA_STALL_MS)
+      await this.restartCamera(track.muted ? 'カメラが中断されました' : 'カメラの映像が止まりました');
+  }
+
+  /** カメラを開き直す（同じカメラを選ぶ） */
+  async restartCamera(reason: string): Promise<void> {
+    if (this.recovering) return;
+    this.recovering = true;
+    console.warn(`[camera] ${reason}。カメラを開き直します`);
+    try {
+      const old = this.cam;
+      old?.stop();
+      this.cam = await openCamera(this.video, {
+        ...this.cfg.params.video,
+        facing: this.facing,
+        deviceId: old?.deviceId,
+      }).catch(() => openCamera(this.video, { ...this.cfg.params.video, facing: this.facing }));
+      this.bindTrack();
+      // 映像の要素が新しくなったので、フレームの受け取りもやり直す
+      this.loop?.stop();
+      this.loop?.start();
+      this.lastMediaTime = -1;
+      this.stalledSince = 0;
+      this.error = null;
+      this.onCameraRestart(reason);
+    } catch (e) {
+      this.error = `カメラを開き直せませんでした：${(e as Error).message}`;
+      console.error(e);
+    } finally {
+      this.recovering = false;
+    }
   }
 
   private process(f: FrameInfo): void {
@@ -169,6 +246,9 @@ export class DeviceCore {
     return { blob, w: c.width, h: c.height };
   }
 }
+
+/** 映像の時刻がこれ以上進まなければ、カメラを開き直す（ms） */
+const CAMERA_STALL_MS = 3000;
 
 export const FACING_SUFFIX: Record<CameraFacing, string> = { user: 'front', environment: 'back' };
 export const FACING_LABEL: Record<CameraFacing, string> = {
