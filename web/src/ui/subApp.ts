@@ -82,6 +82,12 @@ export class SubApp {
     };
     this.peer.onCtrl = (m) => this.onCtrl(m);
     this.peer.start();
+    this.core.onCameraRestart = (reason) => {
+      if (this.recorder.active) {
+        toast(`${reason}。カメラを開き直しました（テスト録画はここで止めました）`, 5000);
+        void this.stopTestRecording();
+      } else toast(`${reason}。カメラを開き直しました`, 4000);
+    };
     this.core.onPose = (f) => {
       // 時刻同期が済むまでは送らない（時刻が主時計に揃わないため）
       if (!this.clock.state.synced) return;
@@ -178,7 +184,7 @@ export class SubApp {
   }
 
   private async stopTestRecording(): Promise<void> {
-    if (!this.recorder.recording) return;
+    if (!this.recorder.active) return;
     const startedLocal = this.recorder.startedAtLocal;
     const mimeType = this.recorder.mimeType;
     const blob = await this.recorder.stop();

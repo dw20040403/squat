@@ -25,6 +25,11 @@ export class VideoRecorder {
     return !!this.rec && this.rec.state === 'recording';
   }
 
+  /** 録画を始めてから、まだ stop() していない（カメラが途切れて MediaRecorder が止まった場合も含む） */
+  get active(): boolean {
+    return !!this.rec;
+  }
+
   start(stream: MediaStream, bitsPerSecond = 6_000_000): void {
     if (this.recording) return;
     const mimeType = pickMimeType();

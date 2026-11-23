@@ -200,6 +200,13 @@ export class MainApp implements MainContext {
     this.peer.onCtrl = (m) => this.onCtrl(m);
     this.peer.start();
     this.core.onPose = (f) => this.scheduler.pushMain({ t: f.t, pose: f.pose, w: f.w, h: f.h });
+    this.core.onCameraRestart = (reason) => {
+      // 録画はカメラが途切れた時点で止まるので、そこまでの分をダウンロードできるようにする
+      if (this.testRecorder.active) {
+        toast(`${reason}。カメラを開き直しました（テスト録画はここで止めました）`, 5000);
+        void this.toggleTestRecording();
+      } else toast(`${reason}。カメラを開き直しました`, 4000);
+    };
     this.rebuildFuser();
     setInterval(() => this.pollFusion(), 15);
     setInterval(() => this.tickMonitor(), 100);
@@ -439,7 +446,7 @@ export class MainApp implements MainContext {
     this.writer = null;
     let video: Blob | null = null;
     let videoInfo: Session['video'] = null;
-    if (this.recorder.recording) {
+    if (this.recorder.active) {
       videoInfo = { startedAt: this.recorder.startedAtLocal, mimeType: this.recorder.mimeType };
       video = await this.recorder.stop();
     }
@@ -480,7 +487,7 @@ export class MainApp implements MainContext {
 
   // ---- テスト録画（spec 5.10.1） ----
   private async toggleTestRecording(): Promise<void> {
-    if (!this.testRecorder.recording) {
+    if (!this.testRecorder.active) {
       if (!this.core.cam) return;
       if (!this.peer.sendCtrl({ type: 'test-rec-start' }))
         toast('副端末と接続されていないため、主端末だけで録画します');
