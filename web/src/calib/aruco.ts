@@ -47,8 +47,26 @@ export async function loadOpenCv(timeoutMs = 60_000): Promise<{ cv: any; loadMs:
     cvPromise = (async () => {
       await loadScript('/opencv/opencv.js', timeoutMs);
       let cv = (window as any).cv;
-      if (cv instanceof Promise) cv = await cv;
-      else if (cv && !cv.Mat) {
+      if (cv instanceof Promise) {
+        // Promiseの中身（Emscriptenのモジュール）も then を持つので、await せずにコールバックで受け取る
+        cv = await new Promise<any>((res, rej) => {
+          const timer = setTimeout(
+            () => rej(new Error('OpenCV.jsの初期化がタイムアウトしました')),
+            timeoutMs,
+          );
+          (cv as Promise<any>).then(
+            (m) => {
+              clearTimeout(timer);
+              if (m && typeof m.then === 'function') delete m.then;
+              res(m);
+            },
+            (e) => {
+              clearTimeout(timer);
+              rej(e);
+            },
+          );
+        });
+      } else if (cv && !cv.Mat) {
         await new Promise<void>((res, rej) => {
           const timer = setTimeout(
             () => rej(new Error('OpenCV.jsの初期化がタイムアウトしました')),
@@ -61,6 +79,9 @@ export async function loadOpenCv(timeoutMs = 60_000): Promise<{ cv: any; loadMs:
         });
       }
       if (!cv?.aruco_ArucoDetector) throw new Error('このOpenCV.jsにはArUcoが含まれていません');
+      // OpenCV.js（Emscripten）のモジュールは then を持つ。そのまま async 関数から返したり await したりすると、
+      // then の呼び出しが終わらずに止まる（タイマーも動かなくなるのでタイムアウトも効かない）。then を消してから返す
+      if (typeof cv.then === 'function') delete cv.then;
       return cv;
     })();
     cvPromise.catch(() => (cvPromise = null));
