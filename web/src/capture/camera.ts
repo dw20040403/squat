@@ -1,4 +1,4 @@
-// 背面の標準広角カメラの取得（spec 5.1）
+// カメラの取得（spec 5.1）。params.json の video.facing で前面（user・既定）か背面（environment）を選ぶ
 
 export interface CameraHandle {
   stream: MediaStream;
@@ -22,6 +22,8 @@ export class CameraError extends Error {
   }
 }
 
+export type CameraFacing = 'user' | 'environment';
+
 /** 背面の標準広角カメラらしいものを選ぶ（超広角・望遠・レンズを切り替える仮想カメラを避ける） */
 export function pickBackWideCamera(devices: { label: string; deviceId: string }[]): string | undefined {
   const back = devices.filter((d) => /back|背面|rear|environment/i.test(d.label));
@@ -29,9 +31,21 @@ export function pickBackWideCamera(devices: { label: string; deviceId: string }[
   return (wide ?? back[0])?.deviceId;
 }
 
+/** 前面（画面側・内側）のカメラらしいものを選ぶ */
+export function pickFrontCamera(devices: { label: string; deviceId: string }[]): string | undefined {
+  return devices.find((d) => /front|前面|user|facetime|truedepth/i.test(d.label))?.deviceId;
+}
+
+export function pickCamera(
+  devices: { label: string; deviceId: string }[],
+  facing: CameraFacing,
+): string | undefined {
+  return facing === 'user' ? pickFrontCamera(devices) : pickBackWideCamera(devices);
+}
+
 export async function openCamera(
   video: HTMLVideoElement,
-  opt: { width: number; height: number; deviceId?: string },
+  opt: { width: number; height: number; deviceId?: string; facing?: CameraFacing },
 ): Promise<CameraHandle> {
   if (!window.isSecureContext) throw new CameraError('カメラを使うにはHTTPSで開いてください', 'insecure');
   if (!navigator.mediaDevices?.getUserMedia)
@@ -41,13 +55,14 @@ export async function openCamera(
     height: { ideal: opt.height },
     frameRate: { ideal: 30 },
   };
+  const facing = opt.facing ?? 'user';
   let stream: MediaStream;
   try {
     stream = await navigator.mediaDevices.getUserMedia({
       audio: false,
       video: opt.deviceId
         ? { ...base, deviceId: { exact: opt.deviceId } }
-        : { ...base, facingMode: { ideal: 'environment' } },
+        : { ...base, facingMode: { ideal: facing } },
     });
   } catch (e) {
     const err = e as DOMException;
@@ -60,13 +75,13 @@ export async function openCamera(
       throw new CameraError('カメラが見つかりません', 'not-found');
     throw new CameraError(`カメラを開けませんでした：${err.message}`, 'other');
   }
-  // 許可を得た後ならラベルが取れる。標準広角が別にあれば開き直す
+  // 許可を得た後ならラベルが取れる。目的のカメラが別にあれば開き直す
   const all = (await navigator.mediaDevices.enumerateDevices())
     .filter((d) => d.kind === 'videoinput')
     .map((d) => ({ label: d.label, deviceId: d.deviceId }));
   const track = stream.getVideoTracks()[0];
   if (!opt.deviceId) {
-    const wanted = pickBackWideCamera(all);
+    const wanted = pickCamera(all, facing);
     if (wanted && wanted !== track.getSettings().deviceId) {
       stream.getTracks().forEach((t) => t.stop());
       return openCamera(video, { ...opt, deviceId: wanted });

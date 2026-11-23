@@ -23,7 +23,7 @@ export function openSettings(core: DeviceCore, opts: { main: boolean; onChanged?
     // deviceName
     const sel = h('select', {});
     const names = [
-      ...new Set([core.deviceName, ...list.map((x) => x.deviceName), 'iphone15-A', 'iphone15-B']),
+      ...new Set([core.deviceName, ...list.map((x) => x.deviceName), 'iphone12', 'iphone11']),
     ];
     for (const n of names) {
       const it = list.find((x) => x.deviceName === n);
@@ -63,7 +63,7 @@ export function openSettings(core: DeviceCore, opts: { main: boolean; onChanged?
       toast(`deviceName を ${sel.value} にしました`);
     });
     body.append(h('h3', {}, 'この端末'), labeled('deviceName（内部パラメータの名前）', sel), intrStatus);
-    const custom = h('input', { placeholder: '新しい名前（例：iphone15-C）' });
+    const custom = h('input', { placeholder: '新しい名前（例：iphone13）' });
     body.appendChild(
       h(
         'div',

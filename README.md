@@ -62,7 +62,7 @@ npm run build && npm start
 ### iPhoneの準備
 1. ルート証明書をインストールし、「設定 → 一般 → 情報 → 証明書信頼設定」で信頼をオンにする（`npm run setup:certs` の表示に従う）
 2. 「設定 → Safari → 詳細 → Webインスペクタ」をオンにする
-3. 縦置きで三脚に固定する
+3. 縦置きで、画面（前面カメラ）を被験者に向けて三脚に固定する
 
 ### 実機のデバッグ
 iPhoneをMacにケーブルでつなぎ、MacのSafariの「開発」メニューからiPhoneのページを選ぶと、Webインスペクタでコンソールやネットワークを確認できます。
@@ -75,12 +75,12 @@ iPhoneをMacにケーブルでつなぎ、MacのSafariの「開発」メニュ�
 2. 各端末の「校正画像撮影」で15〜25枚撮影し、ZIPでダウンロードする
 3. Macで実行する（RMSが1px未満になるまで撮り直す）
    ```bash
-   python3 tools/calibrate_intrinsics.py calib-iphone15-A.zip --device iphone15-A --cols 9 --rows 6 --square 25
+   python3 tools/calibrate_intrinsics.py calib-iphone12.zip --device iphone12 --cols 9 --rows 6 --square 25
    ```
-4. 出力された `config/intrinsics/iphone15-A.json` をそのまま置く（サーバーの再起動は不要）
+4. 出力された `config/intrinsics/iphone12.json` をそのまま置く（仮の値のファイルを上書きします。サーバーの再起動は不要）
 5. 各端末の「設定」で自分の deviceName を選ぶ
 
-校正前に動作を確かめるための仮の値として `config/intrinsics/approx-iphone15.json` を置いてあります（計測には使わないでください）。
+校正前に動作を確かめるための仮の値として、`config/intrinsics/iphone12.json`・`iphone11.json`（`"approximate": true`）と `approx-iphone15.json` を置いてあります（計測には使わないでください）。
 
 ### 2. ArUcoボード
 ```bash
@@ -132,7 +132,8 @@ npm run test:e2e
 
 | 項目 | 実装 | 変更する場所 |
 |---|---|---|
-| deviceName | `iphone15-A`（主）、`iphone15-B`（副） | 各端末の設定画面 |
+| deviceName | `iphone12`（主）、`iphone11`（副） | 各端末の設定画面 |
+| 使うカメラ | 前面（画面側の内側カメラ）。映像は左右反転せずに処理・表示します | `params.json` の `video.facing`（`"user"`＝前面、`"environment"`＝背面） |
 | ArUcoボード | 4×4_50、1辺150mm、2×2、間隔50mm | `config/board.json` |
 | 副端末のデータが届かないとき | 最大50msまで外挿、それを超えたら欠損 | `params.json` の `fusion.maxExtrapMs` |
 | `fusionDelayMs`の基準 | 主端末のフレーム時刻（撮影時刻）t_m から120ms | `fusion.fusionDelayMs` |
@@ -157,7 +158,7 @@ npm run test:e2e
 
 ### 実機での確認が必要なこと
 plan.md の `[実機]` の項目はすべて未確認です。特に次の点は、結果によって設計が変わる可能性があります。
-- `getUserMedia` で選ばれる背面カメラ（ラベルから標準広角を選ぶようにしています）、レンズの自動切り替え、`captureTime` が取れるか（設定画面の「カメラの情報」に表示します）
+- `getUserMedia` で選ばれるカメラ（既定は前面カメラ。背面にした場合はラベルから標準広角を選びます）、レンズの自動切り替え、`captureTime` が取れるか（設定画面の「カメラの情報」に表示します）
 - OpenCV.js（約10MB）がiOSのSafariで読み込めるか、読み込み時間（外部校正の画面に表示します。動かなければ自動で js-aruco2 に切り替わります）
 - iPhone 15での推論時間（GPU）、録画と推論の同時実行、10分間の連続稼働
 - 2台の接続（STUNなし、host候補のみ）と時刻同期の安定性

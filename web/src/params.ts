@@ -44,7 +44,8 @@ export interface ClockSyncParams {
 export interface Params {
   frameIntervalMs: number;
   poseModel: 'full' | 'lite' | 'heavy';
-  video: { width: number; height: number };
+  /** facing：前面（user、画面側の内側カメラ）か背面（environment）。省略時は前面 */
+  video: { width: number; height: number; facing?: 'user' | 'environment' };
   fusion: FusionParams;
   metrics: MetricsParams;
   monitor: MonitorParams;
