@@ -1,5 +1,5 @@
 // 主端末・副端末に共通の部分：カメラ、2D推定、2D表示（表示モード①②③）
-import { openCamera, type CameraHandle } from '../capture/camera';
+import { openCamera, type CameraFacing, type CameraHandle } from '../capture/camera';
 import { FrameLoop, type FrameInfo } from '../capture/frameLoop';
 import { WakeLock } from '../capture/wakeLock';
 import { loadIntrinsics } from '../configLoader';
@@ -32,7 +32,10 @@ export class DeviceCore {
   est: PoseEstimator | null = null;
   loop: FrameLoop | null = null;
   readonly wakeLock = new WakeLock();
-  deviceName: string;
+  /** 端末の名前（例：iphone12）。内部パラメータの名前はこれにカメラの向きを付けたもの */
+  baseName: string;
+  /** 使うカメラ：user＝内カメ（前面）、environment＝外カメ（背面） */
+  facing: CameraFacing;
   intr: Intrinsics | null = null;
   lastPose: Pose2D | null = null;
   lastFrame: PoseFrame | null = null;
@@ -51,7 +54,8 @@ export class DeviceCore {
     readonly cfg: AppConfig,
     readonly role: 'main' | 'sub',
   ) {
-    this.deviceName = loadJson<string>(KEYS.deviceName, role === 'main' ? 'iphone12' : 'iphone11');
+    this.baseName = stripFacing(loadJson<string>(KEYS.deviceName, role === 'main' ? 'iphone12' : 'iphone11'));
+    this.facing = loadJson<CameraFacing>(KEYS.cameraFacing, cfg.params.video.facing ?? 'user');
     this.video = h('video', { playsinline: true, muted: true, autoplay: true });
     this.overlay = h('canvas', { class: 'overlay' });
     this.stage = h('div', { class: 'stage mode-overlay' }, this.video, this.overlay);
@@ -66,10 +70,20 @@ export class DeviceCore {
     this.draw();
   }
 
+  /** 内部パラメータの名前（例：iphone12-front）。副端末への通知・外部校正・記録にもこの名前を使う */
+  get deviceName(): string {
+    return intrinsicsName(this.baseName, this.facing);
+  }
+
   async setDeviceName(name: string): Promise<void> {
-    this.deviceName = name;
-    saveJson(KEYS.deviceName, name);
-    this.intr = await loadIntrinsics(name);
+    this.baseName = stripFacing(name);
+    saveJson(KEYS.deviceName, this.baseName);
+    this.intr = await loadIntrinsics(this.deviceName);
+  }
+
+  /** カメラの向きを保存する（カメラを開き直すため、反映にはページの再読み込みが必要） */
+  saveFacing(f: CameraFacing): void {
+    saveJson(KEYS.cameraFacing, f);
   }
 
   get resolutionOk(): boolean {
@@ -86,7 +100,7 @@ export class DeviceCore {
     status('内部パラメータを読み込み中…');
     this.intr = await loadIntrinsics(this.deviceName);
     status('カメラを起動中…');
-    this.cam = await openCamera(this.video, this.cfg.params.video);
+    this.cam = await openCamera(this.video, { ...this.cfg.params.video, facing: this.facing });
     status('姿勢推定のモデルを読み込み中…');
     const delegate = loadJson<Delegate | 'auto'>(KEYS.delegate, 'auto');
     this.est = await PoseEstimator.create({ model: this.cfg.params.poseModel, delegate });
@@ -155,6 +169,19 @@ export class DeviceCore {
     return { blob, w: c.width, h: c.height };
   }
 }
+
+export const FACING_SUFFIX: Record<CameraFacing, string> = { user: 'front', environment: 'back' };
+export const FACING_LABEL: Record<CameraFacing, string> = {
+  user: '内カメ（前面）',
+  environment: '外カメ（背面）',
+};
+
+/** 端末の名前とカメラの向きから、内部パラメータの名前を作る（例：iphone12 + user → iphone12-front） */
+export const intrinsicsName = (base: string, facing: CameraFacing): string =>
+  `${base}-${FACING_SUFFIX[facing]}`;
+
+/** 内部パラメータの名前から、カメラの向きの部分を取り除く */
+export const stripFacing = (name: string): string => name.replace(/-(front|back)$/, '');
 
 /** 表示モードのボタン（①〜④） */
 export function modeButtons(

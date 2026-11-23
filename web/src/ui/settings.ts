@@ -1,7 +1,8 @@
-// 設定画面：deviceNameの選択（localStorageに保存）、推論・検出の方式、主端末の記録の設定
+// 設定画面：端末の名前とカメラ（内カメ・外カメ）の選択（localStorageに保存）、推論・検出の方式、主端末の記録の設定
 import { listIntrinsics } from '../configLoader';
 import { KEYS, loadJson, saveJson } from '../util/storage';
-import type { DeviceCore } from './device';
+import type { CameraFacing } from '../capture/camera';
+import { FACING_LABEL, intrinsicsName, stripFacing, type DeviceCore } from './device';
 import { clear, h, labeled, openSheet, toast } from './dom';
 
 export interface SubjectInfo {
@@ -20,18 +21,41 @@ export function openSettings(core: DeviceCore, opts: { main: boolean; onChanged?
     const list = await listIntrinsics();
     clear(body);
 
-    // deviceName
+    // 端末の名前（内部パラメータの名前は「名前-front」「名前-back」）
     const sel = h('select', {});
     const names = [
-      ...new Set([core.deviceName, ...list.map((x) => x.deviceName), 'iphone12', 'iphone11']),
+      ...new Set([core.baseName, ...list.map((x) => stripFacing(x.deviceName)), 'iphone12', 'iphone11']),
     ];
-    for (const n of names) {
+    const describe = (n: string) => {
       const it = list.find((x) => x.deviceName === n);
-      const label = it
-        ? `${n}${it.approximate ? '（仮の値）' : ''}${it.imageSize ? ` ${it.imageSize[0]}×${it.imageSize[1]}` : ''}${it.rms ? ` RMS ${it.rms.toFixed(2)}px` : ''}`
-        : `${n}（内部パラメータなし）`;
-      sel.appendChild(h('option', { value: n, selected: n === core.deviceName }, label));
+      return it
+        ? `${it.approximate ? '仮の値' : 'あり'}${it.imageSize ? ` ${it.imageSize[0]}×${it.imageSize[1]}` : ''}${it.rms ? ` RMS ${it.rms.toFixed(2)}px` : ''}`
+        : 'なし';
+    };
+    for (const n of names) {
+      const parts = (['user', 'environment'] as CameraFacing[]).map(
+        (f) => `${f === 'user' ? '内' : '外'}：${describe(intrinsicsName(n, f))}`,
+      );
+      sel.appendChild(
+        h('option', { value: n, selected: n === core.baseName }, `${n}（${parts.join('、')}）`),
+      );
     }
+
+    // カメラ（内カメ・外カメ）。カメラを開き直すため、変えたらページを読み込み直す
+    const facingSel = h(
+      'select',
+      {},
+      ...(['user', 'environment'] as CameraFacing[]).map((f) =>
+        h('option', { value: f, selected: core.facing === f }, FACING_LABEL[f]),
+      ),
+    );
+    facingSel.addEventListener('change', () => {
+      const f = facingSel.value as CameraFacing;
+      if (f === core.facing) return;
+      core.saveFacing(f);
+      toast(`${FACING_LABEL[f]}に切り替えます（ページを読み込み直します）`);
+      setTimeout(() => location.reload(), 800);
+    });
     const intrStatus = h('div', {});
     const showIntr = () => {
       clear(intrStatus);
@@ -49,7 +73,7 @@ export function openSettings(core: DeviceCore, opts: { main: boolean; onChanged?
           h(
             'div',
             { class: core.resolutionOk ? 'okbox' : 'warnbox' },
-            `fx ${i.K.fx.toFixed(1)} fy ${i.K.fy.toFixed(1)} cx ${i.K.cx.toFixed(1)} cy ${i.K.cy.toFixed(1)} ／ 校正時 ${i.imageSize[0]}×${i.imageSize[1]} ／ 現在の映像 ${core.cam?.width ?? '?'}×${core.cam?.height ?? '?'}`,
+            `${core.deviceName}：fx ${i.K.fx.toFixed(1)} fy ${i.K.fy.toFixed(1)} cx ${i.K.cx.toFixed(1)} cy ${i.K.cy.toFixed(1)} ／ 校正時 ${i.imageSize[0]}×${i.imageSize[1]} ／ 現在の映像 ${core.cam?.width ?? '?'}×${core.cam?.height ?? '?'}`,
             core.resolutionOk ? '' : ' → 解像度が一致しません（測定を開始できません）',
             i.approximate ? ' ※仮の値です' : '',
           ),
@@ -60,10 +84,16 @@ export function openSettings(core: DeviceCore, opts: { main: boolean; onChanged?
       await core.setDeviceName(sel.value);
       showIntr();
       opts.onChanged?.();
-      toast(`deviceName を ${sel.value} にしました`);
+      toast(`内部パラメータを ${core.deviceName} にしました`);
     });
-    body.append(h('h3', {}, 'この端末'), labeled('deviceName（内部パラメータの名前）', sel), intrStatus);
-    const custom = h('input', { placeholder: '新しい名前（例：iphone13）' });
+    body.append(
+      h('h3', {}, 'この端末'),
+      labeled('使うカメラ', facingSel),
+      labeled('端末の名前', sel),
+      h('p', { class: 'note' }, '内部パラメータはカメラごとに別の値（名前-front／名前-back）を使います'),
+      intrStatus,
+    );
+    const custom = h('input', { placeholder: '新しい端末の名前（例：iphone13）' });
     body.appendChild(
       h(
         'div',

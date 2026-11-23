@@ -27,4 +27,5 @@ export const KEYS = {
   arucoDetector: 'squat.arucoDetector',
   delegate: 'squat.delegate',
   countdown: 'squat.countdown',
+  cameraFacing: 'squat.cameraFacing',
 } as const;

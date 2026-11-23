@@ -346,9 +346,13 @@ export class MainApp implements MainContext {
         this.calib.main.videoSize[1] !== this.core.cam.height)
     )
       r.push('外部校正のときと主端末の解像度が違います');
+    if (this.calib && this.calib.main.deviceName !== this.core.deviceName)
+      r.push(
+        `外部校正のときと主端末のカメラ・deviceNameが違います（${this.calib.main.deviceName} → ${this.core.deviceName}）`,
+      );
     if (this.calib && this.sub.deviceName && this.calib.sub.deviceName !== this.sub.deviceName)
       r.push(
-        `外部校正のときと副端末のdeviceNameが違います（${this.calib.sub.deviceName} → ${this.sub.deviceName}）`,
+        `外部校正のときと副端末のカメラ・deviceNameが違います（${this.calib.sub.deviceName} → ${this.sub.deviceName}）`,
       );
     if (this.peer.channelsOpen && !this.sub.status?.synced) r.push('時刻同期が終わっていません');
     return r;

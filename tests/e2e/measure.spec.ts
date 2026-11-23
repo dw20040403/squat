@@ -7,8 +7,10 @@ import { lookAtCamera } from '../synthetic/generator';
 import { measuredLayout } from '../../web/src/calib/layout';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const INTR_FILE = resolve(HERE, '../../config/intrinsics/_e2e-fake.json');
-const NAME = '_e2e-fake';
+const INTR_FILE = resolve(HERE, '../../config/intrinsics/_e2e-fake-front.json');
+// 端末の名前。内部パラメータの名前はカメラの向き（既定は内カメ＝front）を付けたもの
+const BASE = '_e2e-fake';
+const NAME = `${BASE}-front`;
 
 test.afterAll(() => rmSync(INTR_FILE, { force: true }));
 
@@ -56,7 +58,7 @@ test('測定を開始し、異常で中止され、中止の原因つきで記�
         sessionStorage.setItem('init', '1');
       }
     },
-    [NAME, calib] as const,
+    [BASE, calib] as const,
   );
   const main = await ctx.newPage();
   const sub = await ctx.newPage();

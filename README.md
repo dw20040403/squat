@@ -62,7 +62,7 @@ npm run build && npm start
 ### iPhoneの準備
 1. ルート証明書をインストールし、「設定 → 一般 → 情報 → 証明書信頼設定」で信頼をオンにする（`npm run setup:certs` の表示に従う）
 2. 「設定 → Safari → 詳細 → Webインスペクタ」をオンにする
-3. 縦置きで、画面（前面カメラ）を被験者に向けて三脚に固定する
+3. 縦置きで三脚に固定する。内カメを使うときは画面を、外カメを使うときは背面を被験者に向ける（カメラは各端末の「設定 → 使うカメラ」で選びます）
 
 ### 実機のデバッグ
 iPhoneをMacにケーブルでつなぎ、MacのSafariの「開発」メニューからiPhoneのページを選ぶと、Webインスペクタでコンソールやネットワークを確認できます。
@@ -75,12 +75,12 @@ iPhoneをMacにケーブルでつなぎ、MacのSafariの「開発」メニュ�
 2. 各端末の「校正画像撮影」で15〜25枚撮影し、ZIPでダウンロードする
 3. Macで実行する（RMSが1px未満になるまで撮り直す）
    ```bash
-   python3 tools/calibrate_intrinsics.py calib-iphone12.zip --device iphone12 --cols 9 --rows 6 --square 25
+   python3 tools/calibrate_intrinsics.py calib-iphone12-front.zip --device iphone12-front --cols 9 --rows 6 --square 25
    ```
-4. 出力された `config/intrinsics/iphone12.json` をそのまま置く（仮の値のファイルを上書きします。サーバーの再起動は不要）
-5. 各端末の「設定」で自分の deviceName を選ぶ
+4. 出力された `config/intrinsics/iphone12-front.json` をそのまま置く（仮の値のファイルを上書きします。サーバーの再起動は不要）。内部パラメータの名前は「端末の名前-front（内カメ）／-back（外カメ）」で、カメラごとに校正が必要です。校正画像撮影の画面に、そのまま使えるコマンドが表示されます
+5. 各端末の「設定」で、使うカメラ（内カメ・外カメ）と端末の名前を選ぶ
 
-校正前に動作を確かめるための仮の値として、`config/intrinsics/iphone12.json`・`iphone11.json`（`"approximate": true`）と `approx-iphone15.json` を置いてあります（計測には使わないでください）。
+校正前に動作を確かめるための仮の値として、`config/intrinsics/iphone12-front.json`・`iphone12-back.json`・`iphone11-front.json`・`iphone11-back.json`（`"approximate": true`）と `approx-iphone15.json` を置いてあります（計測には使わないでください）。
 
 ### 2. ArUcoボード
 ```bash
@@ -132,8 +132,8 @@ npm run test:e2e
 
 | 項目 | 実装 | 変更する場所 |
 |---|---|---|
-| deviceName | `iphone12`（主）、`iphone11`（副） | 各端末の設定画面 |
-| 使うカメラ | 前面（画面側の内側カメラ）。映像は左右反転せずに処理・表示します | `params.json` の `video.facing`（`"user"`＝前面、`"environment"`＝背面） |
+| 端末の名前 | `iphone12`（主）、`iphone11`（副）。内部パラメータの名前は `iphone12-front` のようにカメラの向きを付けたもの | 各端末の設定画面 |
+| 使うカメラ | 内カメ（前面）と外カメ（背面）を端末ごとに選べます。既定は内カメ。映像は左右反転せずに処理・表示します。カメラを変えたら外部校正をやり直してください（やり直すまで測定を開始できません） | 各端末の設定画面（既定値は `params.json` の `video.facing`：`"user"`＝内カメ、`"environment"`＝外カメ） |
 | ArUcoボード | 4×4_50、1辺150mm、2×2、間隔50mm | `config/board.json` |
 | 副端末のデータが届かないとき | 最大50msまで外挿、それを超えたら欠損 | `params.json` の `fusion.maxExtrapMs` |
 | `fusionDelayMs`の基準 | 主端末のフレーム時刻（撮影時刻）t_m から120ms | `fusion.fusionDelayMs` |
@@ -158,7 +158,7 @@ npm run test:e2e
 
 ### 実機での確認が必要なこと
 plan.md の `[実機]` の項目はすべて未確認です。特に次の点は、結果によって設計が変わる可能性があります。
-- `getUserMedia` で選ばれるカメラ（既定は前面カメラ。背面にした場合はラベルから標準広角を選びます）、レンズの自動切り替え、`captureTime` が取れるか（設定画面の「カメラの情報」に表示します）
+- `getUserMedia` で選ばれるカメラ（内カメ・外カメを設定で選びます。外カメはラベルから標準広角を選びます）、レンズの自動切り替え、`captureTime` が取れるか（設定画面の「カメラの情報」に表示します）
 - OpenCV.js（約10MB）がiOSのSafariで読み込めるか、読み込み時間（外部校正の画面に表示します。動かなければ自動で js-aruco2 に切り替わります）
 - iPhone 15での推論時間（GPU）、録画と推論の同時実行、10分間の連続稼働
 - 2台の接続（STUNなし、host候補のみ）と時刻同期の安定性
