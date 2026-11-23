@@ -1,9 +1,9 @@
-// 指標の時系列グラフ（canvas）。現在の再生位置を縦線で示す
-import { METRIC_KEYS, METRIC_LABELS, type MetricKey } from '../metrics/angles';
+// 指標の時系列グラフ（canvas）。現在の再生位置を縦線で示す。縦軸は度なので、角度の指標だけを描く
+import { ANGLE_KEYS, METRIC_LABELS, type MetricKey } from '../metrics/angles';
 import type { SessionFrame } from '../record/session';
 import { syncCanvasSize } from './view2d';
 
-const COLORS: Record<MetricKey, string> = {
+const COLORS: Partial<Record<MetricKey, string>> = {
   kneeFlexL: '#3b82f6',
   kneeFlexR: '#f97316',
   trunkLean: '#e5e7eb',
@@ -11,13 +11,15 @@ const COLORS: Record<MetricKey, string> = {
   toeOutR: '#fdba74',
   kneeInL: '#1d4ed8',
   kneeInR: '#c2410c',
+  shinLeanL: '#a5b4fc',
+  shinLeanR: '#fca5a5',
 };
 
 export class MetricsChart {
   private frames: SessionFrame[] = [];
   private t0 = 0;
   private t1 = 1;
-  visible = new Set<MetricKey>(METRIC_KEYS);
+  visible = new Set<MetricKey>(ANGLE_KEYS);
   cursorT: number | null = null;
   onSeek: (t: number) => void = () => {};
 
@@ -56,7 +58,7 @@ export class MetricsChart {
     for (const f of this.frames)
       for (const k of this.visible) {
         const v = f.angles[k];
-        if (v !== null) {
+        if (v != null) {
           lo = Math.min(lo, v);
           hi = Math.max(hi, v);
         }
@@ -78,14 +80,14 @@ export class MetricsChart {
     const step = dur > 60 ? 10 : dur > 20 ? 5 : 1;
     for (let s = 0; s <= dur; s += step) ctx.fillText(`${s}s`, X(this.t0 + s * 1000) - 6, h - 4);
     ctx.lineWidth = Math.max(1.5, (window.devicePixelRatio || 1) * 1.2);
-    for (const k of METRIC_KEYS) {
+    for (const k of ANGLE_KEYS) {
       if (!this.visible.has(k)) continue;
-      ctx.strokeStyle = COLORS[k];
+      ctx.strokeStyle = COLORS[k] ?? '#9ca3af';
       ctx.beginPath();
       let pen = false;
       for (const f of this.frames) {
         const v = f.angles[k];
-        if (v === null) {
+        if (v == null) {
           pen = false;
           continue;
         }
@@ -106,6 +108,6 @@ export class MetricsChart {
   }
 
   static legend(): { key: MetricKey; label: string; color: string }[] {
-    return METRIC_KEYS.map((k) => ({ key: k, label: METRIC_LABELS[k], color: COLORS[k] }));
+    return ANGLE_KEYS.map((k) => ({ key: k, label: METRIC_LABELS[k], color: COLORS[k] ?? '#9ca3af' }));
   }
 }

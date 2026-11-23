@@ -9,7 +9,7 @@ import type { CalibrationFile, RecordingMeta } from '../ui/calibState';
 import { clear, fmtNum, h, labeled, toast } from '../ui/dom';
 import { Player } from '../ui/playback';
 import { exportSession } from '../ui/sessionsScreen';
-import { METRIC_KEYS, METRIC_LABELS } from '../metrics/angles';
+import { METRIC_KEYS, METRIC_LABELS, METRIC_UNITS } from '../metrics/angles';
 import {
   buildOfflineSession,
   camerasFromCalibration,
@@ -281,7 +281,9 @@ async function boot(): Promise<void> {
             return h(
               'td',
               { class: 'num' },
-              `${fmtNum(m.min, 0)}〜${fmtNum(m.max, 0)}° ${(m.missingRate * 100).toFixed(0)}%`,
+              METRIC_UNITS[k] === 'ratio'
+                ? `${fmtNum(m.min, 2)}〜${fmtNum(m.max, 2)}倍 ${(m.missingRate * 100).toFixed(0)}%`
+                : `${fmtNum(m.min, 0)}〜${fmtNum(m.max, 0)}° ${(m.missingRate * 100).toFixed(0)}%`,
             );
           }),
         ),

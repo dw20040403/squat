@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { cameraAzimuthInBody, computeAngles, formatAngle, roundAngles } from '../../web/src/metrics/angles';
+import {
+  cameraAzimuthInBody,
+  computeAngles,
+  formatAngle,
+  formatMetric,
+  roundAngles,
+} from '../../web/src/metrics/angles';
 import { NUM_LANDMARKS } from '../../web/src/fusion/landmarks';
 import type { Vec3 } from '../../web/src/fusion/math';
 import { squatSkeleton } from '../synthetic/generator';
@@ -104,6 +110,36 @@ describe('指標', () => {
     for (const k of Object.keys(a) as (keyof typeof a)[]) expect(b[k]!).toBeCloseTo(a[k]!, 6);
   });
 
+  it('脛の前傾：直立で0°、しゃがむと膝の曲げに応じて前傾（膝の入り込みには影響されない）', () => {
+    const st = computeAngles(standing());
+    expect(st.shinLeanL).toBeCloseTo(0, 6);
+    expect(st.shinLeanR).toBeCloseTo(0, 6);
+    // 合成データでは下腿の前傾＝膝の曲げ×0.45
+    const J = squatSkeleton({ kneeFlexDeg: 90, trunkLeanDeg: 30, toeOutDeg: 0, kneeInM: 0.06 });
+    const a = computeAngles(J);
+    expect(a.shinLeanL).toBeCloseTo(40.5, 6);
+    expect(a.shinLeanR).toBeCloseTo(40.5, 6);
+    // 膝が足首より後ろなら負
+    const B = standing();
+    B[25] = [-0.1, -0.1, 0.5];
+    expect(computeAngles(B).shinLeanL).toBeLessThan(0);
+  });
+
+  it('足幅（肩幅との比）：足首の左右の間隔 ÷ 肩幅', () => {
+    // standing()：足首の間隔0.2m、肩幅0.38m
+    expect(computeAngles(standing()).stanceRatio).toBeCloseTo(0.2 / 0.38, 6);
+    // 合成データ：足首の間隔0.30m、肩幅0.38m。つま先を開いても、しゃがんでも変わらない
+    const J = squatSkeleton({ kneeFlexDeg: 90, trunkLeanDeg: 30, toeOutDeg: 25, kneeInM: 0.04 });
+    expect(computeAngles(J).stanceRatio).toBeCloseTo(0.3 / 0.38, 6);
+    // 足を前後にずらしても、左右方向の間隔だけを使う
+    const S = standing();
+    S[27] = [-0.1, 0.3, 0.08];
+    expect(computeAngles(S).stanceRatio).toBeCloseTo(0.2 / 0.38, 6);
+    // 肩がなければnull
+    S[11] = null;
+    expect(computeAngles(S).stanceRatio).toBeNull();
+  });
+
   it('関節がnullならその指標はnull', () => {
     const J = standing();
     J[26] = null;
@@ -126,9 +162,17 @@ describe('指標', () => {
       toeOutR: 2,
       kneeInL: 3,
       kneeInR: NaN,
+      shinLeanL: 30.06,
+      shinLeanR: null,
+      stanceRatio: 1.23456,
     });
     expect(a.kneeFlexL).toBe(12.3);
     expect(a.kneeInR).toBeNull();
+    expect(a.shinLeanL).toBe(30.1);
+    expect(a.stanceRatio).toBe(1.23); // 比は小数点以下2桁
+    expect(formatMetric('stanceRatio', 1.234)).toBe('1.23倍');
+    expect(formatMetric('stanceRatio', null)).toBe('—');
+    expect(formatMetric('shinLeanL', 30.4)).toBe('30°');
     expect(formatAngle(null)).toBe('—');
     expect(formatAngle(-0.4)).toBe('0°');
     expect(formatAngle(85.6)).toBe('86°');

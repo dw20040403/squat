@@ -1,7 +1,7 @@
 // 指標の計算（spec 5.6）。純粋な関数
 
 import { LM } from '../fusion/landmarks';
-import { angleBetweenDeg, cross, deg, dot, mid, normalize, sub, type Vec3 } from '../fusion/math';
+import { angleBetweenDeg, cross, deg, dot, mid, norm, normalize, sub, type Vec3 } from '../fusion/math';
 import type { MetricsParams } from '../params';
 
 export const METRIC_KEYS = [
@@ -12,8 +12,12 @@ export const METRIC_KEYS = [
   'toeOutR',
   'kneeInL',
   'kneeInR',
+  'shinLeanL',
+  'shinLeanR',
+  'stanceRatio',
 ] as const;
 export type MetricKey = (typeof METRIC_KEYS)[number];
+/** 指標の値（名前は Angles だが、足幅の比のように角度でないものも含む） */
 export type Angles = Record<MetricKey, number | null>;
 
 export const METRIC_LABELS: Record<MetricKey, string> = {
@@ -24,7 +28,30 @@ export const METRIC_LABELS: Record<MetricKey, string> = {
   toeOutR: 'つま先の開き 右',
   kneeInL: '膝の入り込み 左',
   kneeInR: '膝の入り込み 右',
+  shinLeanL: '脛の前傾 左',
+  shinLeanR: '脛の前傾 右',
+  stanceRatio: '足幅（肩幅比）',
 };
+
+/** 指標の単位：deg＝角度（度）、ratio＝比（単位なし） */
+export const METRIC_UNITS: Record<MetricKey, 'deg' | 'ratio'> = {
+  kneeFlexL: 'deg',
+  kneeFlexR: 'deg',
+  trunkLean: 'deg',
+  toeOutL: 'deg',
+  toeOutR: 'deg',
+  kneeInL: 'deg',
+  kneeInR: 'deg',
+  shinLeanL: 'deg',
+  shinLeanR: 'deg',
+  stanceRatio: 'ratio',
+};
+
+/** 角度の指標だけ（グラフの縦軸を度でそろえるため） */
+export const ANGLE_KEYS = METRIC_KEYS.filter((k) => METRIC_UNITS[k] === 'deg');
+
+/** 記録するときの小数点以下の桁数（角度は1桁、比は2桁） */
+export const metricDigits = (k: MetricKey): number => (METRIC_UNITS[k] === 'ratio' ? 2 : 1);
 
 export const DEFAULT_METRICS_PARAMS: MetricsParams = { kneeInMinFlexDeg: 30, kneeInMinHorizM: 0.05 };
 
@@ -48,6 +75,9 @@ export function emptyAngles(): Angles {
     toeOutR: null,
     kneeInL: null,
     kneeInR: null,
+    shinLeanL: null,
+    shinLeanR: null,
+    stanceRatio: null,
   };
 }
 
@@ -68,10 +98,42 @@ export function kneeFlex(hip: Vec3 | null, knee: Vec3 | null, ankle: Vec3 | null
   return angleBetweenDeg(sub(knee, hip), sub(ankle, knee));
 }
 
+/**
+ * 脛の前傾：下腿ベクトル（足首→膝）を体の前後の面（y_bと鉛直）に投影し、鉛直方向となす角。
+ * 膝が足首より前（y_b向き）なら正。膝の左右のずれ（入り込み）は含めない
+ */
+export function shinLean(ankle: Vec3 | null, knee: Vec3 | null, bf: BodyFrame): number | null {
+  if (!ankle || !knee) return null;
+  const s = sub(knee, ankle);
+  const fwd = dot(s, bf.yb);
+  const up = s[2];
+  if (Math.hypot(fwd, up) < 1e-6) return null;
+  return deg(Math.atan2(fwd, up));
+}
+
+/** 肩幅がこれより短ければ、足幅の比は計算しない（m） */
+const MIN_SHOULDER_WIDTH_M = 0.1;
+
+/**
+ * 足幅（肩幅との比）：左右の足首の間隔のx_b成分（体の左右方向）÷ 両肩の間の距離（3D）
+ */
+export function stanceRatio(
+  lAnkle: Vec3 | null,
+  rAnkle: Vec3 | null,
+  lShoulder: Vec3 | null,
+  rShoulder: Vec3 | null,
+  bf: BodyFrame,
+): number | null {
+  if (!lAnkle || !rAnkle || !lShoulder || !rShoulder) return null;
+  const shoulder = norm(sub(rShoulder, lShoulder));
+  if (shoulder < MIN_SHOULDER_WIDTH_M) return null;
+  return Math.abs(dot(sub(rAnkle, lAnkle), bf.xb)) / shoulder;
+}
+
 /** (x_b, y_b)成分 */
 const toBody = (v: Vec3, bf: BodyFrame): [number, number] => [dot(v, bf.xb), dot(v, bf.yb)];
 
-/** 7つの指標を計算する。Jは MediaPipe の番号で引ける33点（世界座標、m） */
+/** 指標を計算する。Jは MediaPipe の番号で引ける33点（世界座標、m） */
 export function computeAngles(J: (Vec3 | null)[], p: MetricsParams = DEFAULT_METRICS_PARAMS): Angles {
   const a = emptyAngles();
   a.kneeFlexL = kneeFlex(J[LM.leftHip], J[LM.leftKnee], J[LM.leftAnkle]);
@@ -114,15 +176,20 @@ export function computeAngles(J: (Vec3 | null)[], p: MetricsParams = DEFAULT_MET
   a.toeOutL = L.toe === null ? null : -L.toe;
   a.kneeInR = R.kneeIn;
   a.kneeInL = L.kneeIn === null ? null : -L.kneeIn;
+
+  // 脛の前傾・足幅（肩幅との比）
+  a.shinLeanL = shinLean(J[LM.leftAnkle], J[LM.leftKnee], bf);
+  a.shinLeanR = shinLean(J[LM.rightAnkle], J[LM.rightKnee], bf);
+  a.stanceRatio = stanceRatio(J[LM.leftAnkle], J[LM.rightAnkle], ls, rs, bf);
   return a;
 }
 
-/** 記録用に小数点以下1桁へ丸める */
-export function roundAngles(a: Angles, digits = 1): Angles {
-  const f = 10 ** digits;
+/** 記録用に丸める（角度は小数点以下1桁、比は2桁） */
+export function roundAngles(a: Angles): Angles {
   const out = emptyAngles();
   for (const k of METRIC_KEYS) {
     const v = a[k];
+    const f = 10 ** metricDigits(k);
     out[k] = v === null || !Number.isFinite(v) ? null : Math.round(v * f) / f;
   }
   return out;
@@ -133,6 +200,17 @@ export function formatAngle(v: number | null): string {
   if (v === null || !Number.isFinite(v)) return '—';
   const r = Math.round(v);
   return `${r === 0 ? 0 : r}°`;
+}
+
+/** 表示用の比（小数点以下2桁、nullは「—」） */
+export function formatRatio(v: number | null): string {
+  if (v === null || !Number.isFinite(v)) return '—';
+  return `${v.toFixed(2)}倍`;
+}
+
+/** 指標の単位に合わせて表示用の文字列にする */
+export function formatMetric(k: MetricKey, v: number | null): string {
+  return METRIC_UNITS[k] === 'ratio' ? formatRatio(v) : formatAngle(v);
 }
 
 /**
