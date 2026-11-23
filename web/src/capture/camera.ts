@@ -1,4 +1,4 @@
-// カメラの取得（spec 5.1）。params.json の video.facing で前面（user・既定）か背面（environment）を選ぶ
+// カメラの取得（spec 5.1）。前面＝内カメ（user）か背面＝外カメ（environment）を選ぶ（設定画面、既定は params.json の video.facing）
 
 export interface CameraHandle {
   stream: MediaStream;

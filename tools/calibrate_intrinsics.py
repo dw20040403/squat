@@ -5,7 +5,7 @@
 OpenCVの calibrateCamera でカメラ行列と歪み係数を求め、config/intrinsics/<deviceName>.json に出力する。
 
 例:
-  python3 tools/calibrate_intrinsics.py calib-iphone12.zip --device iphone12 --cols 9 --rows 6 --square 25
+  python3 tools/calibrate_intrinsics.py calib-iphone12-front.zip --device iphone12-front --cols 9 --rows 6 --square 25
 
   --cols/--rows はチェッカーボードの「内側の交点」の数（9×6の交点なら 10×7 マス）。
   --square は印刷後に実測した1マスの大きさ（mm）。
@@ -64,7 +64,7 @@ def find_corners(img: np.ndarray, pattern: tuple[int, int]) -> np.ndarray | None
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("input", type=Path, help="校正画像のZIPまたはフォルダ")
-    ap.add_argument("--device", required=True, help="deviceName（例: iphone12）")
+    ap.add_argument("--device", required=True, help="deviceName（例: iphone12-front。内カメは-front、外カメは-back）")
     ap.add_argument("--cols", type=int, default=9, help="内側の交点の数（横）")
     ap.add_argument("--rows", type=int, default=6, help="内側の交点の数（縦）")
     ap.add_argument("--square", type=float, default=25.0, help="1マスの大きさ（mm）")
