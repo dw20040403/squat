@@ -42,7 +42,7 @@ describe('セッション', () => {
         main2d: null,
         sub2d: null,
         joints3d: [[0, 0, 1]],
-        angles: { ...emptyAngles(), kneeFlexL: 85.24 },
+        angles: { ...emptyAngles(), kneeFlexL: 85.24, stanceRatio: 1.2468 },
         quality: { reprojErrPx: 3.456, validJoints: 23, swapApplied: true },
       },
       {
@@ -58,10 +58,10 @@ describe('セッション', () => {
   it('CSV：nullは空欄', () => {
     const csv = sessionToCsv(s).trim().split('\n');
     expect(csv[0]).toBe(
-      't_ms,elapsed_s,kneeFlexL,kneeFlexR,trunkLean,toeOutL,toeOutR,kneeInL,kneeInR,reprojErrPx,validJoints,swapApplied',
+      't_ms,elapsed_s,kneeFlexL,kneeFlexR,trunkLean,toeOutL,toeOutR,kneeInL,kneeInR,shinLeanL,shinLeanR,stanceRatio,reprojErrPx,validJoints,swapApplied',
     );
-    expect(csv[1]).toBe('1000.0,0.000,85.2,,,,,,,3.46,23,1');
-    expect(csv[2]).toBe('1100.0,0.100,,,,,,,,,0,0');
+    expect(csv[1]).toBe('1000.0,0.000,85.2,,,,,,,,,1.25,3.46,23,1');
+    expect(csv[2]).toBe('1100.0,0.100,,,,,,,,,,,,0,0');
   });
   it('統計', () => {
     const st = sessionStats(s);

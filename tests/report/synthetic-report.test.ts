@@ -9,7 +9,7 @@ import { processSequence } from '../../web/src/fusion/pipeline';
 import { cameraCenter } from '../../web/src/fusion/camera';
 import { JOINT_INDICES } from '../../web/src/fusion/landmarks';
 import { normalize, type Vec3 } from '../../web/src/fusion/math';
-import { computeAngles, METRIC_KEYS } from '../../web/src/metrics/angles';
+import { computeAngles, METRIC_KEYS, METRIC_UNITS } from '../../web/src/metrics/angles';
 import type { LayoutCamera, Params } from '../../web/src/params';
 import { makeSequence } from '../synthetic/generator';
 
@@ -77,8 +77,11 @@ function evaluate(
 
 const f1 = (v: number) => (Number.isFinite(v) ? v.toFixed(1) : '—');
 const f2 = (v: number) => (Number.isFinite(v) ? v.toFixed(2) : '—');
+const f3 = (v: number) => (Number.isFinite(v) ? v.toFixed(3) : '—');
 const metricHeader = `| ${METRIC_KEYS.join(' | ')} |`;
-const metricCells = (r: Result) => METRIC_KEYS.map((k) => f1(r.metrics[k])).join(' | ');
+// 角度は度（小数点以下1桁）、足幅の比は比のまま（小数点以下3桁）
+const metricCells = (r: Result) =>
+  METRIC_KEYS.map((k) => (METRIC_UNITS[k] === 'ratio' ? f3(r.metrics[k]) : f1(r.metrics[k]))).join(' | ');
 
 it('合成データの誤差レポートを出力する', () => {
   const lines: string[] = [];

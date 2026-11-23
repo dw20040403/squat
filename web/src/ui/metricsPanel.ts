@@ -1,5 +1,5 @@
-// 指標パネル（spec 5.7.2）：7項目を2列で、映像の下部に半透明で重ねて表示する
-import { formatAngle, METRIC_KEYS, METRIC_LABELS, type Angles } from '../metrics/angles';
+// 指標パネル（spec 5.7.2）：左右の指標を2列で、映像の下部に半透明で重ねて表示する
+import { formatMetric, METRIC_KEYS, METRIC_LABELS, type Angles } from '../metrics/angles';
 import { KEYS, loadJson, saveJson } from '../util/storage';
 import { h } from './dom';
 
@@ -17,7 +17,10 @@ export class MetricsPanel {
       'toeOutR',
       'kneeInL',
       'kneeInR',
+      'shinLeanL',
+      'shinLeanR',
       'trunkLean',
+      'stanceRatio',
     ] as const;
     for (const k of order) {
       const v = h('b', {}, '—');
@@ -42,6 +45,6 @@ export class MetricsPanel {
   }
 
   update(a: Angles | null): void {
-    for (const k of METRIC_KEYS) this.cells.get(k)!.textContent = a ? formatAngle(a[k]) : '—';
+    for (const k of METRIC_KEYS) this.cells.get(k)!.textContent = a ? formatMetric(k, a[k]) : '—';
   }
 }

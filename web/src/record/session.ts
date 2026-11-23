@@ -4,7 +4,7 @@ import type { Extrinsics, Intrinsics } from '../fusion/camera';
 import type { Pose2D } from '../fusion/landmarks';
 import { round } from '../fusion/landmarks';
 import type { Vec3 } from '../fusion/math';
-import { METRIC_KEYS, type Angles } from '../metrics/angles';
+import { METRIC_KEYS, metricDigits, type Angles } from '../metrics/angles';
 import type { LayoutCamera, Params } from '../params';
 
 export type AbortReason =
@@ -97,7 +97,7 @@ export function toRecordFrame(f: SessionFrame): SessionFrame {
   };
 }
 
-/** CSV（時刻と7つの指標）。nullは空欄。時刻は開始からの秒と主時計の両方 */
+/** CSV（時刻と指標）。nullは空欄。時刻は開始からの秒と主時計の両方 */
 export function sessionToCsv(s: Session): string {
   const header = ['t_ms', 'elapsed_s', ...METRIC_KEYS, 'reprojErrPx', 'validJoints', 'swapApplied'];
   const lines = [header.join(',')];
@@ -105,7 +105,7 @@ export function sessionToCsv(s: Session): string {
     const cells = [
       f.t.toFixed(1),
       ((f.t - s.startedAt) / 1000).toFixed(3),
-      ...METRIC_KEYS.map((k) => (f.angles[k] === null ? '' : f.angles[k]!.toFixed(1))),
+      ...METRIC_KEYS.map((k) => (f.angles[k] == null ? '' : f.angles[k]!.toFixed(metricDigits(k)))),
       f.quality.reprojErrPx === null ? '' : f.quality.reprojErrPx.toFixed(2),
       String(f.quality.validJoints),
       f.quality.swapApplied ? '1' : '0',
@@ -133,7 +133,7 @@ export function sessionStats(s: Pick<Session, 'frames' | 'startedAt' | 'endedAt'
   const n = s.frames.length;
   const metrics: SessionStats['metrics'] = {};
   for (const k of METRIC_KEYS) {
-    const vals = s.frames.map((f) => f.angles[k]).filter((v): v is number => v !== null);
+    const vals = s.frames.map((f) => f.angles[k]).filter((v): v is number => v != null);
     metrics[k] = {
       missingRate: n ? 1 - vals.length / n : 1,
       min: vals.length ? Math.min(...vals) : null,
