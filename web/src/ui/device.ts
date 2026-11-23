@@ -51,7 +51,7 @@ export class DeviceCore {
     readonly cfg: AppConfig,
     readonly role: 'main' | 'sub',
   ) {
-    this.deviceName = loadJson<string>(KEYS.deviceName, role === 'main' ? 'iphone15-A' : 'iphone15-B');
+    this.deviceName = loadJson<string>(KEYS.deviceName, role === 'main' ? 'iphone12' : 'iphone11');
     this.video = h('video', { playsinline: true, muted: true, autoplay: true });
     this.overlay = h('canvas', { class: 'overlay' });
     this.stage = h('div', { class: 'stage mode-overlay' }, this.video, this.overlay);

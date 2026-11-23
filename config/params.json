@@ -1,7 +1,7 @@
 {
   "frameIntervalMs": 90,
   "poseModel": "full",
-  "video": { "width": 1280, "height": 720 },
+  "video": { "width": 1280, "height": 720, "facing": "user" },
   "fusion": {
     "fusionDelayMs": 120,
     "maxPairGapMs": 150,
