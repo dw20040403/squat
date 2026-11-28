@@ -13,6 +13,7 @@ export default defineConfig({
       input: {
         index: resolve(__dirname, 'index.html'),
         offline: resolve(__dirname, 'offline.html'),
+        sessions: resolve(__dirname, 'sessions.html'),
       },
     },
   },

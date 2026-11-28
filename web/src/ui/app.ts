@@ -16,6 +16,7 @@ async function boot(): Promise<void> {
         h('a', { class: 'btn primary', href: '?role=main' }, '主端末（カメラA・表示・記録）'),
         h('a', { class: 'btn', href: '?role=sub' }, '副端末（カメラB）'),
         h('a', { class: 'btn ghost', href: '/offline.html' }, 'オフラインモード'),
+        h('a', { class: 'btn ghost', href: '/sessions.html' }, '記録の確認（PC）'),
       ),
     );
     return;

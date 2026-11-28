@@ -79,5 +79,15 @@ test('測定を開始し、異常で中止され、中止の原因つきで記�
   await main.getByRole('button', { name: 'メニュー' }).click();
   await main.getByRole('button', { name: 'セッション一覧' }).click();
   await expect(main.locator('.sheet').last()).toContainText('中止：');
+  // PCの「記録の確認」に、主端末と同じ記録（映像つき）が届いている
+  await expect(main.locator('#toast')).toContainText('PCにも送りました', { timeout: 30_000 });
+  const pc = await ctx.newPage();
+  await pc.goto('/sessions.html');
+  const row = pc.locator('tr').first();
+  await expect(row).toContainText('中止：');
+  await expect(row.getByRole('button', { name: '映像' })).toBeVisible();
+  await row.getByRole('button', { name: '再生' }).click();
+  await expect(pc.locator('.sheet .player video')).toHaveCount(1);
+  await expect(pc.locator('.sheet .player canvas.chart')).toBeVisible();
   await ctx.close();
 });

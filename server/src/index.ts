@@ -9,11 +9,14 @@ import { fileURLToPath } from 'node:url';
 import { WebSocketServer, type WebSocket } from 'ws';
 import qrcode from 'qrcode-terminal';
 import { Room } from './signaling.js';
+import { createSessionsHandler } from './sessions.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(here, '..', '..');
 const WEB_DIST = join(ROOT, 'web', 'dist');
 const CONFIG_DIR = join(ROOT, 'config');
+const SESSIONS_DIR = process.env.SESSIONS_DIR ?? join(ROOT, 'recordings', 'sessions');
+const handleSessions = createSessionsHandler(SESSIONS_DIR);
 
 interface Options {
   dev: boolean;
@@ -96,6 +99,7 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
 /** /config/* と /api/* */
 function handleApi(req: IncomingMessage, res: ServerResponse): boolean {
   const url = new URL(req.url ?? '/', 'http://x');
+  if (handleSessions(req, res)) return true;
   if (url.pathname === '/api/intrinsics') {
     const dir = join(CONFIG_DIR, 'intrinsics');
     const items = existsSync(dir)
@@ -227,6 +231,7 @@ async function main(): Promise<void> {
     const scheme = useHttps ? 'https' : 'http';
     console.log(`\nスクワット姿勢計測システム  (${o.dev ? '開発' : '本番'}モード, ${scheme.toUpperCase()})`);
     console.log(`  ローカル:        ${scheme}://localhost:${o.port}/`);
+    console.log(`  記録の確認(PC):  ${scheme}://localhost:${o.port}/sessions.html`);
     const ips = lanAddresses();
     for (const ip of ips) {
       console.log(`\n  LAN ${ip}`);

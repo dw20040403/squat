@@ -55,6 +55,7 @@ npm run build && npm start
 - 主端末：`https://<MacのIP>:8443/?role=main`
 - 副端末：`https://<MacのIP>:8443/?role=sub`
 - オフラインモード：`https://<MacのIP>:8443/offline.html`
+- 記録の確認（PC）：`https://localhost:8443/sessions.html`
 
 開発中は `npm run dev` で、Viteの開発サーバーを同じポートで動かします（HTTPS・ホットリロード）。
 証明書がない場合はHTTPで起動します（Macのブラウザの `localhost` では動きますが、iPhoneのカメラにはHTTPSが必要です）。
@@ -100,6 +101,11 @@ A2に1枚（`--paper A3x2` でA3横2枚）のPDFを作ります。実寸（100%�
 しきい値は `config/params.json` で変えられます。
 
 「メニュー → セッション一覧」で、再生（表示モード①〜④・シーク・速度・指標のグラフ）、ダウンロード（JSON・CSV・映像）、削除ができます。
+
+測定を終えると、主端末は記録と主カメラの映像をサーバー（Mac）にも送ります。Macのブラウザで `sessions.html` を開くと、主端末のセッション一覧と同じ画面で再生できます。
+表示される骨格と指標は、測定中に主端末で計算・表示していたものそのままです（映像から推論し直すことはしません）。
+送られたデータは `recordings/sessions/<セッションID>/`（`session.json`・`meta.json`・`video.mp4`）に保存されます（場所は環境変数 `SESSIONS_DIR` で変えられます）。
+送れなかったとき（サーバーを止めていた、など）は、主端末のセッション一覧の「PCへ送る」で送り直せます。
 
 ### 5. テスト録画とオフラインモード
 主端末の「テスト録画」で2台が同時に録画します。止めると、各端末で動画と `<role>-meta.json`（主端末は `calibration.json` も）をダウンロードできます。
