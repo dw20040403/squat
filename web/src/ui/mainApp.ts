@@ -38,7 +38,7 @@ import { openExtrinsicsScreen } from './extrinsicsUi';
 import { openLayoutScreen } from './layoutScreen';
 import type { MainContext, SubInfo } from './mainContext';
 import { MetricsPanel } from './metricsPanel';
-import { openSessions } from './sessionsScreen';
+import { openSessions, sendToServer } from './sessionsScreen';
 import { loadSubject, openSettings } from './settings';
 
 export class MainApp implements MainContext {
@@ -454,7 +454,17 @@ export class MainApp implements MainContext {
     if (w) {
       try {
         await w.finish(endedAt, aborted, video, { video: video ? videoInfo : null });
-        toast(`記録を保存しました（${w.frameCount}フレーム）`);
+        const saved = `記録を保存しました（${w.frameCount}フレーム）`;
+        toast(`${saved}。PCに送っています…`, 60_000);
+        // 主端末に表示していた骨格・指標と映像を、そのままPCの「記録の確認」に送る
+        void sendToServer(w.header.id).then(
+          () => toast(`${saved}。PCにも送りました`, 4000),
+          (e) =>
+            toast(
+              `${saved}が、PCには送れませんでした：${(e as Error).message}（セッション一覧から送り直せます）`,
+              8000,
+            ),
+        );
       } catch (e) {
         await alertDialog('記録を保存できませんでした', (e as Error).message);
       }
@@ -594,6 +604,7 @@ export class MainApp implements MainContext {
           ),
           h('button', { class: 'btn', onclick: () => this.exportCalibration() }, 'calibration.json'),
           h('a', { class: 'btn', href: '/offline.html', target: '_blank' }, 'オフラインモード'),
+          h('a', { class: 'btn', href: '/sessions.html', target: '_blank' }, '記録の確認（PC用）'),
         ),
       );
       if (this.calib)

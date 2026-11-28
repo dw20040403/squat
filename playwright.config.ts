@@ -16,6 +16,7 @@ export default defineConfig({
   webServer: {
     command: `node server/dist/index.js --http --port ${PORT} --no-qr`,
     url: `http://localhost:${PORT}/api/health`,
+    env: { SESSIONS_DIR: 'recordings/e2e-sessions' },
     reuseExistingServer: true,
     timeout: 30_000,
   },
