@@ -4,7 +4,7 @@ import type { AppConfig } from '../configLoader';
 import type { Camera } from '../fusion/camera';
 import { cameraCenter } from '../fusion/camera';
 import { DltFuser, type FusedFrame, type Fuser } from '../fusion/fuser';
-import { fromFlat, JOINT_INDICES, requiredVisible, type Pose2D } from '../fusion/landmarks';
+import { fromFlat, JOINT_INDICES, type Pose2D } from '../fusion/landmarks';
 import { fuseFrame, FusionScheduler } from '../fusion/pipeline';
 import { NullFeedbackEngine, Speaker, type FeedbackEngine } from '../feedback';
 import { cameraAzimuthInBody, type Angles } from '../metrics/angles';
@@ -476,13 +476,10 @@ export class MainApp implements MainContext {
   private tickMonitor(): void {
     if (!this.measuring) return;
     const now = nowMs();
-    const minVis = this.cfg.params.fusion.minVisibility;
     const r = this.monitor.update({
       now,
       channelOpen: this.peer.channelsOpen,
       lastSubPoseAt: this.lastSubPoseAt,
-      mainRequiredVisible: requiredVisible(this.core.lastPose, minVis),
-      subRequiredVisible: requiredVisible(this.sub.lastPose, minVis),
       reprojErrPx: this.lastFused?.quality.reprojErrPx ?? null,
       mainFps: this.core.rate.rate(now),
       subFps: this.subRate.rate(now),

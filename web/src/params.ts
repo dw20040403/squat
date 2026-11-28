@@ -22,7 +22,6 @@ export interface MetricsParams {
 
 export interface MonitorParams {
   peerTimeoutS: number;
-  lowVisibilityS: number;
   maxReprojErrPx: number;
   highReprojS: number;
   minFps: number;

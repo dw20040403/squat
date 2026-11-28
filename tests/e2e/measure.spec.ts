@@ -1,4 +1,4 @@
-// 測定の開始 → 異常による中止 → 記録の保存（偽のカメラには人が映っていないので、可視度の条件で中止される）
+// 測定の開始 → 測定停止 → 記録の保存（偽のカメラには人が映っていないが、可視度の条件では中止しない）
 import { rmSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,7 +14,7 @@ const NAME = `${BASE}-front`;
 
 test.afterAll(() => rmSync(INTR_FILE, { force: true }));
 
-test('測定を開始し、異常で中止され、中止の原因つきで記録が保存される', async ({ browser }) => {
+test('測定を開始し、人が映っていなくても中止されず、測定停止で記録が保存される', async ({ browser }) => {
   // 偽のカメラは横長1280×720なので、それに合わせた仮の内部パラメータを置く
   const intr = {
     deviceName: NAME,
@@ -49,6 +49,19 @@ test('測定を開始し、異常で中止され、中止の原因つきで記�
     measured: measuredLayout(cm.extr, cs.extr),
   };
   const ctx = await browser.newContext({ permissions: ['camera'] });
+  // テスト環境（1つのブラウザで2台分を動かす）は処理速度・往復時間が実機より悪く、
+  // その条件で中止されると確かめたいことが確かめられないので、関節以外の監視のしきい値を緩める
+  await ctx.route('**/config/params.json', async (route) => {
+    const params = await (await route.fetch()).json();
+    params.monitor = {
+      ...params.monitor,
+      peerTimeoutS: 10,
+      maxReprojErrPx: 1e6,
+      minFps: 0,
+      maxRttMs: 1e6,
+    };
+    await route.fulfill({ json: params });
+  });
   await ctx.addInitScript(
     ([name, c]) => {
       localStorage.setItem('squat.deviceName', JSON.stringify(name));
@@ -68,23 +81,24 @@ test('測定を開始し、異常で中止され、中止の原因つきで記�
   await expect(start).toBeEnabled({ timeout: 90_000 });
   await start.click();
   await expect(main.locator('.statusbar')).toContainText('測定中');
-  // 赤い警告ダイアログ
-  const dlg = main.locator('.alert-overlay');
-  await expect(dlg).toBeVisible({ timeout: 30_000 });
-  await expect(dlg).toContainText('測定を中止しました');
-  await expect(dlg).toContainText(/関節|処理速度|データが届きません/);
-  await dlg.getByRole('button', { name: 'OK' }).click();
+  // 偽のカメラには人が映っていないが、必須の関節が見えないことでは中止しない
+  await main.waitForTimeout(4000);
+  await expect(main.locator('.alert-overlay')).toHaveCount(0);
+  await expect(main.locator('.statusbar')).toContainText('測定中');
+  // 測定停止を押すまで記録が続き、押すと保存される
+  await main.getByRole('button', { name: '測定停止' }).click();
   await expect(main.locator('#toast')).toContainText('記録を保存しました', { timeout: 15_000 });
-  // 一覧に「中止」と原因が出る
   await main.getByRole('button', { name: 'メニュー' }).click();
   await main.getByRole('button', { name: 'セッション一覧' }).click();
-  await expect(main.locator('.sheet').last()).toContainText('中止：');
+  const list = main.locator('.sheet').last();
+  await expect(list.locator('tr')).toHaveCount(1);
+  await expect(list).not.toContainText('中止：');
   // PCの「記録の確認」に、主端末と同じ記録（映像つき）が届いている
   await expect(main.locator('#toast')).toContainText('PCにも送りました', { timeout: 30_000 });
   const pc = await ctx.newPage();
   await pc.goto('/sessions.html');
   const row = pc.locator('tr').first();
-  await expect(row).toContainText('中止：');
+  await expect(row).toContainText('リアルタイム');
   await expect(row.getByRole('button', { name: '映像' })).toBeVisible();
   await row.getByRole('button', { name: '再生' }).click();
   await expect(pc.locator('.sheet .player video')).toHaveCount(1);

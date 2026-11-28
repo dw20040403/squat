@@ -7,8 +7,6 @@ const ok = (now: number): MonitorSample => ({
   now,
   channelOpen: true,
   lastSubPoseAt: now - 50,
-  mainRequiredVisible: true,
-  subRequiredVisible: true,
   reprojErrPx: 5,
   mainFps: 10,
   subFps: 10,
@@ -38,12 +36,6 @@ describe('異常の検知', () => {
   it('DataChannelの切断が1秒続く', () => {
     const r = run((now) => (now >= 1000 ? { channelOpen: false } : {}));
     expect(r?.reason).toBe('peer-timeout');
-    expect(r?.at).toBe(2000);
-  });
-  it('必須の関節が見えない状態が1秒続く（途中で戻れば中止しない）', () => {
-    expect(run((now) => (now >= 1000 && now < 1800 ? { subRequiredVisible: false } : {}))).toBeNull();
-    const r = run((now) => (now >= 1000 ? { mainRequiredVisible: false } : {}));
-    expect(r?.reason).toBe('low-visibility');
     expect(r?.at).toBe(2000);
   });
   it('再投影誤差20px超が2秒続く', () => {

@@ -16,7 +16,6 @@
   "metrics": { "kneeInMinFlexDeg": 30, "kneeInMinHorizM": 0.05 },
   "monitor": {
     "peerTimeoutS": 1.0,
-    "lowVisibilityS": 1.0,
     "maxReprojErrPx": 20,
     "highReprojS": 2.0,
     "minFps": 5,
