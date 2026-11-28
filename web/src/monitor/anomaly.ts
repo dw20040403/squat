@@ -1,4 +1,5 @@
 // 測定中の異常の検知（spec 5.9）。時系列を与えると、中止の時刻と原因を返す純粋なロジック
+// 必須の関節が見えないことでは中止しない（人が枠から外れても、終了ボタンを押すまで記録を続ける）
 
 import type { MonitorParams } from '../params';
 import type { AbortInfo, AbortReason } from '../record/session';
@@ -10,9 +11,6 @@ export interface MonitorSample {
   channelOpen: boolean;
   /** 最後に副端末の姿勢データを受け取った時刻（主時計）。まだならnull */
   lastSubPoseAt: number | null;
-  /** 必須の関節の可視度がすべてminVisibility以上か（nullは判定なし） */
-  mainRequiredVisible: boolean | null;
-  subRequiredVisible: boolean | null;
   /** 再投影誤差の平均（px）。計算できなければnull */
   reprojErrPx: number | null;
   /** 主端末の処理fps、副端末のデータの受信レート */
@@ -24,6 +22,7 @@ export interface MonitorSample {
 
 export const ABORT_MESSAGES: Record<AbortReason, string> = {
   'peer-timeout': '副端末との接続が切れたか、データが届きません',
+  // 必須の関節が見えないことでは中止しなくなった。以前の記録の表示のために残す
   'low-visibility': '必須の関節（肩・腰・膝・足首・かかと・足先）が見えていません',
   'high-reproj': '再投影誤差が大きくなりました（カメラが動いたか、校正が合っていません）',
   'low-fps': '処理速度が低下しました',
@@ -49,7 +48,6 @@ class Persist {
 
 export class AnomalyMonitor {
   private startedAt = 0;
-  private vis = new Persist();
   private reproj = new Persist();
   private fps = new Persist();
   private rtt = new Persist();
@@ -61,7 +59,7 @@ export class AnomalyMonitor {
   start(now: number): void {
     this.startedAt = now;
     this.aborted = null;
-    [this.vis, this.reproj, this.fps, this.rtt, this.closed].forEach((x) => x.reset());
+    [this.reproj, this.fps, this.rtt, this.closed].forEach((x) => x.reset());
   }
 
   get result(): AbortInfo | null {
@@ -86,20 +84,7 @@ export class AnomalyMonitor {
     if (silentFor >= p.peerTimeoutS * 1000)
       return abort('peer-timeout', `副端末のデータが${(silentFor / 1000).toFixed(1)}秒届いていません`);
 
-    // 2. 必須の関節の可視度
-    const lowVis = s.mainRequiredVisible === false || s.subRequiredVisible === false;
-    const visFor = this.vis.update(lowVis, s.now);
-    if (visFor >= p.lowVisibilityS * 1000) {
-      const which = [
-        s.mainRequiredVisible === false ? '主カメラ' : '',
-        s.subRequiredVisible === false ? '副カメラ' : '',
-      ]
-        .filter(Boolean)
-        .join('・');
-      return abort('low-visibility', `${which}で${(visFor / 1000).toFixed(1)}秒続きました`);
-    }
-
-    // 3. 再投影誤差
+    // 2. 再投影誤差
     const highErr = s.reprojErrPx !== null && s.reprojErrPx > p.maxReprojErrPx;
     const errFor = this.reproj.update(highErr, s.now);
     if (errFor >= p.highReprojS * 1000)
@@ -108,7 +93,7 @@ export class AnomalyMonitor {
         `平均${s.reprojErrPx!.toFixed(1)}px（しきい値${p.maxReprojErrPx}px）が${(errFor / 1000).toFixed(1)}秒続きました`,
       );
 
-    // 4. 処理速度
+    // 3. 処理速度
     const lowFps = (s.mainFps !== null && s.mainFps < p.minFps) || (s.subFps !== null && s.subFps < p.minFps);
     const fpsFor = this.fps.update(lowFps, s.now);
     if (fpsFor >= p.lowFpsS * 1000)
@@ -117,7 +102,7 @@ export class AnomalyMonitor {
         `主端末${fmt(s.mainFps)}fps・副端末${fmt(s.subFps)}fps（しきい値${p.minFps}fps）`,
       );
 
-    // 5. 往復時間
+    // 4. 往復時間
     const highRtt = s.rttMs !== null && s.rttMs > p.maxRttMs;
     const rttFor = this.rtt.update(highRtt, s.now);
     if (rttFor >= p.highRttS * 1000)
