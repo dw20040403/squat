@@ -22,13 +22,15 @@ export class MetricsChart {
   visible = new Set<MetricKey>(ANGLE_KEYS);
   cursorT: number | null = null;
   onSeek: (t: number) => void = () => {};
+  /** 描画範囲の左右の余白（CSS px）。再生バーのつまみの動く範囲に合わせるときに変える */
+  padLeft = 48;
+  padRight = 8;
 
   constructor(private canvas: HTMLCanvasElement) {
     const seek = (clientX: number) => {
       const r = canvas.getBoundingClientRect();
-      const x = (clientX - r.left) / r.width;
-      const pad = 0.08;
-      const s = Math.min(1, Math.max(0, (x - pad) / (1 - pad - 0.02)));
+      const span = r.width - this.padLeft - this.padRight;
+      const s = span > 0 ? Math.min(1, Math.max(0, (clientX - r.left - this.padLeft) / span)) : 0;
       this.onSeek(this.t0 + s * (this.t1 - this.t0));
     };
     canvas.addEventListener('pointerdown', (e) => seek(e.clientX));
@@ -49,8 +51,9 @@ export class MetricsChart {
     ctx.clearRect(0, 0, w, h);
     ctx.fillStyle = '#0b0f17';
     ctx.fillRect(0, 0, w, h);
-    const padL = w * 0.08;
-    const padR = w * 0.02;
+    const scale = w / Math.max(1, this.canvas.clientWidth);
+    const padL = this.padLeft * scale;
+    const padR = this.padRight * scale;
     const padT = 8;
     const padB = 18;
     let lo = -30;

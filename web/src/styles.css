@@ -480,9 +480,68 @@ canvas.topview {
   padding: 6px 0;
   flex-wrap: wrap;
 }
-.player input[type='range'] {
-  flex: 1;
-  min-width: 120px;
+.player .seekrow {
+  /* グラフの左の目盛り（°）の幅を空け、つまみの中心がグラフの時間軸の両端に来るようにする */
+  padding: 0 0 4px 40px;
+}
+.player input.seekbar {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+}
+.player input.seekbar::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: #374151;
+}
+.player input.seekbar::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: #374151;
+}
+/* つまみの幅は playback.ts の SEEK_THUMB_PX と同じにする */
+.player input.seekbar::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: #ef4444;
+  border: none;
+}
+.player input.seekbar::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ef4444;
+  border: none;
+}
+.player.panel-beside .stage-row {
+  display: flex;
+  gap: 8px;
+  min-height: 55vh;
+}
+.player.panel-beside .stage-row .stage {
+  min-height: 0;
+}
+.metrics.beside {
+  position: static;
+  flex: 0 0 230px;
+  grid-template-columns: 1fr;
+  align-content: start;
+  gap: 6px;
+  padding: 10px 12px;
+  overflow: auto;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.metrics.beside.hidden {
+  display: none;
 }
 .player canvas.chart {
   width: 100%;

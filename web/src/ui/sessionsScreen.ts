@@ -18,16 +18,21 @@ import {
 import { sessionToCsv, type Session } from '../record/session';
 import { downloadBlob, downloadJson, downloadText, videoExt } from '../util/download';
 import { clear, fmtDate, h, openSheet, toast } from './dom';
-import { Player } from './playback';
+import { Player, type PlayerOptions } from './playback';
 
 export function exportSession(s: Session, kind: 'json' | 'csv'): void {
   if (kind === 'json') downloadJson(s, `session-${s.id}.json`);
   else downloadText(sessionToCsv(s), `session-${s.id}-metrics.csv`, 'text/csv');
 }
 
-export function openPlayback(s: Session, video: Blob | null, minVisibility: number): void {
+export function openPlayback(
+  s: Session,
+  video: Blob | null,
+  minVisibility: number,
+  opts: PlayerOptions = {},
+): void {
   openSheet(`再生 ${s.id}`, (body, sheet) => {
-    const p = new Player(s, video, minVisibility);
+    const p = new Player(s, video, minVisibility, opts);
     body.appendChild(p.el);
     body.appendChild(
       h(
@@ -59,6 +64,8 @@ export interface SessionSource {
   remove(id: string): Promise<void>;
   /** 一覧の上に出す説明 */
   status(): Promise<string>;
+  /** 再生画面の設定 */
+  player?: PlayerOptions;
   /** 行ごとに追加するボタン */
   extraButtons?(m: SessionMeta): HTMLElement[];
 }
@@ -102,6 +109,7 @@ export const remoteSource: SessionSource = {
   load: loadRemoteSession,
   loadVideo: loadRemoteVideo,
   remove: deleteRemoteSession,
+  player: { panelBeside: true },
   async status() {
     return '主端末で測定を終えると、記録（主端末に表示していた骨格・指標）と映像が自動でここに送られます。届かなかった記録は、主端末の「セッション一覧」の「PCへ送る」で送り直せます。';
   },
@@ -177,7 +185,12 @@ export async function renderSessionList(
                     try {
                       const s = await src.load(m.id);
                       if (!s) return toast('読み込めませんでした');
-                      openPlayback(s, m.hasVideo ? await src.loadVideo(m.id) : null, minVisibility);
+                      openPlayback(
+                        s,
+                        m.hasVideo ? await src.loadVideo(m.id) : null,
+                        minVisibility,
+                        src.player,
+                      );
                     } catch (e) {
                       toast((e as Error).message, 4000);
                     }

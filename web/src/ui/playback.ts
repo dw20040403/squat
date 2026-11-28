@@ -8,6 +8,14 @@ import { h } from './dom';
 import { modeButtons, type DisplayMode } from './device';
 import { MetricsPanel } from './metricsPanel';
 
+export interface PlayerOptions {
+  /** 指標を映像に重ねず、映像の左隣にまとめて表示する（PCで見るとき） */
+  panelBeside?: boolean;
+}
+
+/** 再生バーのつまみの幅（styles.css の .seekbar と同じ値） */
+const SEEK_THUMB_PX = 16;
+
 export class Player {
   readonly el: HTMLElement;
   private stage: HTMLElement;
@@ -32,6 +40,7 @@ export class Player {
     private s: Session,
     videoBlob: Blob | null,
     private minVisibility = 0.5,
+    opts: PlayerOptions = {},
   ) {
     const hasVideo = !!videoBlob && !!s.video;
     this.mode = hasVideo ? 'overlay' : 'skeleton';
@@ -57,7 +66,8 @@ export class Player {
         ),
       ),
     );
-    this.stage.append(modeButtons(this, true, hasVideo), presets, this.panel.toggle, this.panel.el);
+    this.stage.append(modeButtons(this, true, hasVideo), presets, this.panel.toggle);
+    if (!opts.panelBeside) this.stage.appendChild(this.panel.el);
 
     const canvas = h('canvas', { class: 'chart' });
     this.chart = new MetricsChart(canvas);
@@ -79,7 +89,14 @@ export class Player {
 
     const t0 = s.frames.length ? s.frames[0].t : s.startedAt;
     const t1 = s.frames.length ? s.frames[s.frames.length - 1].t : t0;
-    this.seek = h('input', { type: 'range', min: 0, max: Math.max(1, t1 - t0), step: 10, value: 0 });
+    this.seek = h('input', {
+      type: 'range',
+      class: 'seekbar',
+      min: 0,
+      max: Math.max(1, t1 - t0),
+      step: 10,
+      value: 0,
+    });
     this.seek.addEventListener('input', () => this.seekTo(t0 + Number(this.seek.value)));
     this.timeLabel = h('span', { class: 'note' }, '');
     this.playBtn = h(
@@ -96,19 +113,35 @@ export class Player {
       this.rate = Number(speed.value);
       if (this.video) this.video.playbackRate = this.rate;
     });
+    // 再生バーはグラフの真上に置き、グラフの時間軸をつまみの動く範囲に合わせる
+    const seekRow = h('div', { class: 'seekrow' }, this.seek);
     this.el = h(
       'div',
-      { class: 'player' },
-      this.stage,
-      h('div', { class: 'controls' }, this.playBtn, this.seek, speed, this.timeLabel),
+      { class: `player${opts.panelBeside ? ' panel-beside' : ''}` },
+      opts.panelBeside ? h('div', { class: 'stage-row' }, this.panel.el, this.stage) : this.stage,
+      h('div', { class: 'controls' }, this.playBtn, speed, this.timeLabel),
+      seekRow,
       canvas,
       legend,
     );
-    new ResizeObserver(() => {
+    if (opts.panelBeside) this.panel.el.classList.add('beside');
+    const onResize = () => {
+      this.alignChart(canvas);
       this.render();
-      this.chart.draw();
-    }).observe(this.stage);
+    };
+    const ro = new ResizeObserver(onResize);
+    ro.observe(this.stage);
+    ro.observe(canvas);
     this.render();
+  }
+
+  /** グラフの描画範囲を、再生バーのつまみの中心が動く範囲（両端からつまみの半分だけ内側）に合わせる */
+  private alignChart(canvas: HTMLCanvasElement): void {
+    const c = canvas.getBoundingClientRect();
+    const s = this.seek.getBoundingClientRect();
+    if (!c.width || !s.width) return;
+    this.chart.padLeft = s.left + SEEK_THUMB_PX / 2 - c.left;
+    this.chart.padRight = c.right - (s.right - SEEK_THUMB_PX / 2);
   }
 
   setMode(m: DisplayMode): void {
